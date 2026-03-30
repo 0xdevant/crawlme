@@ -1,101 +1,64 @@
-import Image from "next/image";
+import { ScanForm } from "@/components/ScanForm";
+import { CONTACT_EMAIL, SITE_URL } from "@/lib/site";
+import { THREADS_PROFILE_URL } from "@/lib/threads-constants";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const mailto = `mailto:${CONTACT_EMAIL}`;
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+  return (
+    <div className="relative min-h-screen overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(251,191,36,0.14),_transparent_55%),radial-gradient(ellipse_at_bottom,_rgba(59,130,246,0.08),_transparent_50%)]" />
+      <main className="relative mx-auto flex max-w-3xl flex-col gap-12 px-6 py-16 sm:py-24">
+        <header className="space-y-4">
+          <p className="font-mono text-xs uppercase tracking-[0.35em] text-amber-200/80">CrawlMe</p>
+          <h1 className="text-balance text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+            幫你嘅網站更易轉化、更易賣
+          </h1>
+          <p className="text-pretty text-lg leading-relaxed text-white/65">
+            貼上公開頁面網址。CrawlMe 擷取頁面事實，並優先分析<strong className="text-white/80">營銷說服力、轉化阻力同下一步行動</strong>
+            （其次先係技術／搜尋可見度）。免費版有概覽同 3 條預覽；Pro 解鎖完整優先清單同轉化筆記。
+          </p>
+        </header>
+
+        <ScanForm />
+
+        <footer className="border-t border-white/10 pt-10 text-sm text-white/60">
+          <div className="grid gap-10 sm:grid-cols-2">
+            <div className="space-y-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-white/80">聯絡我們</h2>
+              <p className="text-xs leading-relaxed text-white/55">
+                有合作、媒體或產品問題，歡迎聯絡。
+              </p>
+              <ul className="flex flex-col gap-2 text-xs">
+                <li>
+                  <a href={mailto} className="text-amber-200/90 underline decoration-amber-400/35 underline-offset-2 hover:text-amber-100">
+                    {CONTACT_EMAIL}
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href={THREADS_PROFILE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-violet-300/95 underline decoration-violet-400/35 underline-offset-2 hover:text-violet-200"
+                  >
+                    Threads — @pls.clawify
+                  </a>
+                </li>
+                <li className="font-mono text-[11px] text-white/40">{SITE_URL}</li>
+              </ul>
+            </div>
+            <div className="space-y-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-white/80">免責聲明</h2>
+              <p className="text-xs leading-relaxed text-white/50">
+                CrawlMe 以自動化方式擷取你提供嘅公開網址內容，並整理成建議；<strong className="text-white/65">唔構成法律、財務、稅務或專業顧問意見</strong>
+                ，亦<strong className="text-white/65">不保證</strong>
+                搜尋排名、流量、轉化率、銷售或任何商業結果。你應自行判斷同承擔使用建議嘅風險。服務可能會變更或中斷，恕不另行通知。
+              </p>
+            </div>
+          </div>
+        </footer>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
