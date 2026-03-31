@@ -83,6 +83,11 @@ Use the same names as `.env.example`. Do **not** commit real values.
 
 If deploy fails on **KV id**, fix the id in `wrangler.jsonc` or set `CLOUDFLARE_KV_NAMESPACE_ID`.
 
+### Venice works locally but not in production (empty content / odd errors)
+
+- **Align secrets:** Worker **Variables and Secrets** should use the same **`VENICE_API_KEY`** and **`VENICE_MODEL`** as your working `.env` / `.env.local`. An **empty or placeholder `VENICE_MODEL`** in the dashboard used to send `model: ""` to the API (now guarded — still fix the value).
+- **Larger pages in prod:** Real URLs can produce a bigger `PAGE_FACTS` JSON than your local test URL → harder completion; try fewer extra pages or a model with a larger context.
+
 ### Internal Server Error (500) on `GET /`
 
 1. **Clerk:** Confirm `CLERK_SECRET_KEY` is set on the Worker and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` is in GitHub Actions secrets (redeploy after adding). Keys must be from the **same** Clerk production instance.
