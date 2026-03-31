@@ -87,6 +87,7 @@ If deploy fails on **KV id**, fix the id in `wrangler.jsonc` or set `CLOUDFLARE_
 
 - **Align secrets:** Worker **Variables and Secrets** should use the same **`VENICE_API_KEY`** and **`VENICE_MODEL`** as your working `.env` / `.env.local`. An **empty or placeholder `VENICE_MODEL`** in the dashboard used to send `model: ""` to the API (now guarded — still fix the value).
 - **Larger pages in prod:** Real URLs can produce a bigger `PAGE_FACTS` JSON than your local test URL → harder completion; try fewer extra pages or a model with a larger context.
+- **Empty `message` from Venice (prod only):** Often **under-estimating prompt size** (big CJK snapshot) led to `max_tokens` + prompt exceeding the real context window. The app now uses a stricter token estimate and optional **`VENICE_CONTEXT_WINDOW_TOKENS`** (e.g. `65536` or `131072` if your model supports it). Check **Workers → Logs** for `[venice] empty assistant content` (includes `finish_reason`, token counts, preview).
 
 ### Internal Server Error (500) on `GET /`
 

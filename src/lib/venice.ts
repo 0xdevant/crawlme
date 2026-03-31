@@ -12,7 +12,6 @@ export const DEFAULT_VENICE_MODEL = "openai-gpt-54-mini";
  * Venice defaults `max_tokens` to 16384; long prompts + that default exceed 32k context.
  * We cap completion tokens so prompt + max_tokens ≤ context window.
  */
-const DEFAULT_CONTEXT_WINDOW_TOKENS = 32768;
 const VENICE_DEFAULT_MAX_COMPLETION = 16384;
 const CONTEXT_SAFETY_MARGIN = 256;
 /**
@@ -23,18 +22,27 @@ const MIN_COMPLETION_TOKENS = 2048;
 
 function estimatePromptTokens(messages: Array<{ content: string }>): number {
   const chars = messages.reduce((s, m) => s + (m.content?.length ?? 0), 0);
-  // Upper-bound prompt size: CJK + code can exceed 1 token / 2 chars; stay pessimistic so
-  // max_tokens never exceeds context − actual prompt (Venice rejects if sum > window).
-  return Math.ceil(chars / 1.5);
+  // `chars/1.5` underestimates CJK-heavy prompts (often ~1 token/char) → we think there is
+  // more "room" for max_tokens than the real context allows → Venice can return 200 with
+  // empty `message.content` (prod: big HTML → big PAGE_FACTS). Use a stricter divisor.
+  return Math.ceil(chars / 1.15);
+}
+
+function defaultContextWindowTokens(): number {
+  const raw = getEnv("VENICE_CONTEXT_WINDOW_TOKENS");
+  if (!raw) return 32768;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n >= 8192 ? n : 32768;
 }
 
 /** Safe max completion size for the given messages (Venice 32k-style window). */
 export function clampVeniceMaxCompletionTokens(
   messages: Array<{ content: string }>,
-  contextWindowTokens: number = DEFAULT_CONTEXT_WINDOW_TOKENS,
+  contextWindowTokens?: number,
 ): number {
+  const window = contextWindowTokens ?? defaultContextWindowTokens();
   const estIn = estimatePromptTokens(messages);
-  const room = contextWindowTokens - estIn - CONTEXT_SAFETY_MARGIN;
+  const room = window - estIn - CONTEXT_SAFETY_MARGIN;
   const cap = Math.min(
     VENICE_DEFAULT_MAX_COMPLETION,
     Math.max(MIN_COMPLETION_TOKENS, room),
@@ -64,6 +72,38 @@ function parseTimeoutMs(raw: string | undefined, fallback: number): number {
   return Number.isFinite(n) && n >= 10_000 ? n : fallback;
 }
 
+type VeniceChoice = {
+  finish_reason?: string;
+  stop_reason?: string | null;
+  message?: {
+    content?: string | null | Array<{ type?: string; text?: string }>;
+    reasoning_content?: string | null;
+    refusal?: string | null;
+  };
+};
+
+function extractAssistantText(msg: VeniceChoice["message"]): string {
+  if (!msg) return "";
+  if (typeof msg.refusal === "string" && msg.refusal.trim()) {
+    throw new Error(`Venice refused: ${msg.refusal.slice(0, 500)}`);
+  }
+  const raw = msg.content;
+  let text = "";
+  if (typeof raw === "string") text = raw;
+  else if (Array.isArray(raw)) {
+    text = raw
+      .map((p) =>
+        typeof p === "object" && p && "text" in p ? String((p as { text?: string }).text ?? "") : "",
+      )
+      .join("");
+  }
+  if (!text.trim() && typeof msg.reasoning_content === "string" && msg.reasoning_content.trim()) {
+    const rc = msg.reasoning_content.trim();
+    if (rc.startsWith("{") || rc.startsWith("[")) text = rc;
+  }
+  return text;
+}
+
 export async function veniceChatJson(params: {
   apiKey: string;
   model: string;
@@ -71,12 +111,12 @@ export async function veniceChatJson(params: {
   veniceParameters?: Record<string, unknown>;
   /** Hard cap on completion tokens; still clamped to fit context window. */
   maxCompletionTokens?: number;
-  /** Model context length for cap math (default 32768). */
+  /** Model context length for cap math (default 32768, or VENICE_CONTEXT_WINDOW_TOKENS). */
   contextWindowTokens?: number;
   /** Override `VENICE_FETCH_TIMEOUT_MS` / default 180s. */
   fetchTimeoutMs?: number;
 }): Promise<{ text: string; usage: VeniceUsage }> {
-  const ctx = params.contextWindowTokens ?? DEFAULT_CONTEXT_WINDOW_TOKENS;
+  const ctx = params.contextWindowTokens ?? defaultContextWindowTokens();
   const safeCap = clampVeniceMaxCompletionTokens(params.messages, ctx);
   const maxTokens =
     params.maxCompletionTokens !== undefined
@@ -134,16 +174,39 @@ export async function veniceChatJson(params: {
   }
 
   const data = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-    usage?: {
-      prompt_tokens?: number;
-      completion_tokens?: number;
-      total_tokens?: number;
-    };
+    model?: string;
+    choices?: VeniceChoice[];
+    usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   };
 
-  const text = data.choices?.[0]?.message?.content ?? "";
-  if (!text) throw new Error("Venice returned empty content");
+  const choice0 = data.choices?.[0];
+  const text = extractAssistantText(choice0?.message);
+
+  if (!text.trim()) {
+    const fr = choice0?.finish_reason ?? choice0?.stop_reason ?? "?";
+    const model = data.model ?? "?";
+    const usageHint = data.usage
+      ? ` prompt_tokens=${data.usage.prompt_tokens ?? "?"} completion_tokens=${data.usage.completion_tokens ?? "?"}`
+      : "";
+    const rawPreview = JSON.stringify(data).slice(0, 1200);
+    console.error("[venice] empty assistant content", {
+      model: modelId,
+      maxTokens,
+      estPromptChars: params.messages.reduce((s, m) => s + (m.content?.length ?? 0), 0),
+      finish_reason: fr,
+      usage: usageHint,
+      rawPreview,
+    });
+    const hint =
+      fr === "length"
+        ? "（可能觸發輸出長度上限 — 可縮短 prompt、或設 VENICE_CONTEXT_WINDOW_TOKENS 更大若模型支援）"
+        : fr === "content_filter" || fr === "safety"
+          ? "（內容被過濾）"
+          : "";
+    throw new Error(
+      `Venice returned empty content（model=${model} finish_reason=${fr}${hint}）。如 prod 頁面較大，試用較細 URL 或加大上下文設定。`,
+    );
+  }
 
   if (data.usage) {
     usage.promptTokens = data.usage.prompt_tokens;
