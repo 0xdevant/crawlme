@@ -1,5 +1,6 @@
 import type { SeoFacts } from "@/lib/seo-extract";
 import { getEnv } from "@/lib/env";
+import { parseModelJsonObject } from "@/lib/parse-model-json";
 import { veniceChatJson } from "@/lib/venice";
 
 const BRAVE_SEARCH_ENDPOINT = "https://api.search.brave.com/res/v1/web/search";
@@ -432,9 +433,9 @@ export async function inferCompetitorMarketCategoryEn(params: {
       veniceParameters: { include_venice_system_prompt: false },
     });
 
-    let parsed: unknown;
+    let parsed: Record<string, unknown>;
     try {
-      parsed = JSON.parse(out.text);
+      parsed = parseModelJsonObject(out.text);
     } catch {
       return {
         category_en: null,
@@ -446,7 +447,7 @@ export async function inferCompetitorMarketCategoryEn(params: {
       };
     }
 
-    const raw = (parsed as { category_en?: unknown }).category_en;
+    const raw = parsed.category_en;
     const s = typeof raw === "string" ? raw.trim().replace(/\s+/g, " ") : "";
     if (s.length < 6) {
       return {
@@ -660,9 +661,9 @@ async function filterSearchCandidatesWithVenice(params: {
       veniceParameters: { include_venice_system_prompt: false },
     });
 
-    let parsed: unknown;
+    let parsed: Record<string, unknown>;
     try {
-      parsed = JSON.parse(out.text);
+      parsed = parseModelJsonObject(out.text);
     } catch {
       return { urls: [], error: "filter_model_json_parse_failed", usage: out.usage };
     }
@@ -1176,9 +1177,9 @@ export async function discoverCompetitorUrlsViaModel(params: {
       veniceParameters: { include_venice_system_prompt: false },
     });
 
-    let parsed: unknown;
+    let parsed: Record<string, unknown>;
     try {
-      parsed = JSON.parse(out.text);
+      parsed = parseModelJsonObject(out.text);
     } catch {
       return {
         urls: [],

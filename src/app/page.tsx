@@ -27,11 +27,15 @@ export default function Home() {
             </li>
             <li>
               <span aria-hidden>📊 </span>
-              <strong className="font-medium text-white/90">市場＋競爭對手分析</strong>
+              <strong className="font-medium text-white/90">
+                市場＋競爭對手分析
+              </strong>
             </li>
             <li>
               <span aria-hidden>🛠️ </span>
-              仲會直接俾你「<strong className="font-medium text-white/90">可以落手做</strong>」嘅技術建議
+              仲會直接俾你「
+              <strong className="font-medium text-white/90">可以落手做</strong>
+              」嘅技術建議
             </li>
           </ul>
           <div
@@ -40,9 +44,18 @@ export default function Home() {
           >
             <span className="shrink-0 font-medium text-amber-200/95">額度</span>
             <span className="text-amber-50/90">
-              每次分析都會出<strong className="font-medium text-amber-100/95">完整行動清單</strong>
-              同<strong className="font-medium text-amber-100/95">優先建議</strong>
-              。<strong className="font-medium text-amber-100/95">體驗額度</strong>
+              每次分析都會出
+              <strong className="font-medium text-amber-100/95">
+                完整行動清單
+              </strong>
+              同
+              <strong className="font-medium text-amber-100/95">
+                優先建議
+              </strong>
+              。
+              <strong className="font-medium text-amber-100/95">
+                體驗額度
+              </strong>
               ：每個 IP 限做 1 次分析；全站每日總名額有限（先到先得）。
             </span>
           </div>
@@ -52,7 +65,9 @@ export default function Home() {
 
         <footer className="border-t border-white/10 pt-10 text-sm text-foreground-muted">
           <div className="mb-10 flex flex-wrap items-baseline gap-x-3 gap-y-2 border-b border-white/[0.06] pb-8 text-xs">
-            <span className="shrink-0 text-foreground-subtle">想支持我哋：</span>
+            <span className="shrink-0 text-foreground-subtle">
+              想支持我哋：
+            </span>
             <a
               href={THREADS_UNLOCK_POST_URL}
               target="_blank"

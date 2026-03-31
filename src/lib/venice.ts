@@ -1,7 +1,43 @@
+import { getEnv } from "@/lib/env";
+
 const VENICE_BASE = "https://api.venice.ai/api/v1";
+
+/** Wall-clock cap for the Venice HTTP request (large JSON can take minutes). Override via env. */
+const DEFAULT_VENICE_FETCH_TIMEOUT_MS = 180_000;
 
 /** Default when `VENICE_MODEL` is unset — GPT-5.4 Mini (Venice). Override if needed. */
 export const DEFAULT_VENICE_MODEL = "openai-gpt-54-mini";
+
+/**
+ * Venice defaults `max_tokens` to 16384; long prompts + that default exceed 32k context.
+ * We cap completion tokens so prompt + max_tokens ≤ context window.
+ */
+const DEFAULT_CONTEXT_WINDOW_TOKENS = 32768;
+const VENICE_DEFAULT_MAX_COMPLETION = 16384;
+const CONTEXT_SAFETY_MARGIN = 256;
+/**
+ * Floor for `max_tokens`. Too low → the model stops mid-JSON and strings look "trimmed"
+ * (e.g. strengths ending with「及」). Large structured `json_object` replies need a few k tokens.
+ */
+const MIN_COMPLETION_TOKENS = 2048;
+
+function estimatePromptTokens(messages: Array<{ content: string }>): number {
+  const chars = messages.reduce((s, m) => s + (m.content?.length ?? 0), 0);
+  // Upper-bound prompt size: CJK + code can exceed 1 token / 2 chars; stay pessimistic so
+  // max_tokens never exceeds context − actual prompt (Venice rejects if sum > window).
+  return Math.ceil(chars / 1.5);
+}
+
+/** Safe max completion size for the given messages (Venice 32k-style window). */
+export function clampVeniceMaxCompletionTokens(
+  messages: Array<{ content: string }>,
+  contextWindowTokens: number = DEFAULT_CONTEXT_WINDOW_TOKENS,
+): number {
+  const estIn = estimatePromptTokens(messages);
+  const room = contextWindowTokens - estIn - CONTEXT_SAFETY_MARGIN;
+  const cap = Math.min(VENICE_DEFAULT_MAX_COMPLETION, Math.max(MIN_COMPLETION_TOKENS, room));
+  return cap;
+}
 
 export type VeniceUsage = {
   promptTokens?: number;
@@ -19,28 +55,64 @@ function headerSnapshot(headers: Headers): Record<string, string> {
   return out;
 }
 
+function parseTimeoutMs(raw: string | undefined, fallback: number): number {
+  if (!raw?.trim()) return fallback;
+  const n = Number.parseInt(raw.trim(), 10);
+  return Number.isFinite(n) && n >= 10_000 ? n : fallback;
+}
+
 export async function veniceChatJson(params: {
   apiKey: string;
   model: string;
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
   veniceParameters?: Record<string, unknown>;
+  /** Hard cap on completion tokens; still clamped to fit context window. */
+  maxCompletionTokens?: number;
+  /** Model context length for cap math (default 32768). */
+  contextWindowTokens?: number;
+  /** Override `VENICE_FETCH_TIMEOUT_MS` / default 180s. */
+  fetchTimeoutMs?: number;
 }): Promise<{ text: string; usage: VeniceUsage }> {
-  const res = await fetch(`${VENICE_BASE}/chat/completions`, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${params.apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: params.model,
-      messages: params.messages,
-      response_format: { type: "json_object" },
-      temperature: 0.2,
-      ...(params.veniceParameters
-        ? { venice_parameters: params.veniceParameters }
-        : {}),
-    }),
-  });
+  const ctx = params.contextWindowTokens ?? DEFAULT_CONTEXT_WINDOW_TOKENS;
+  const safeCap = clampVeniceMaxCompletionTokens(params.messages, ctx);
+  const maxTokens =
+    params.maxCompletionTokens !== undefined
+      ? Math.min(params.maxCompletionTokens, safeCap)
+      : safeCap;
+
+  const timeoutMs =
+    params.fetchTimeoutMs ??
+    parseTimeoutMs(getEnv("VENICE_FETCH_TIMEOUT_MS"), DEFAULT_VENICE_FETCH_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(`${VENICE_BASE}/chat/completions`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${params.apiKey}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: params.model,
+        messages: params.messages,
+        max_tokens: maxTokens,
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+        ...(params.veniceParameters
+          ? { venice_parameters: params.veniceParameters }
+          : {}),
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (e) {
+    const name = e instanceof Error ? e.name : "";
+    if (name === "AbortError" || name === "TimeoutError") {
+      throw new Error(
+        `Venice 請求逾時（>${Math.round(timeoutMs / 1000)} 秒）。可調高 VENICE_FETCH_TIMEOUT_MS 或稍後重試。`,
+      );
+    }
+    throw e;
+  }
 
   const headers = headerSnapshot(res.headers);
   const usage: VeniceUsage = {

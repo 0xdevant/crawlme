@@ -50,6 +50,45 @@ export function stripDuplicateExecutiveSummary(
   return s;
 }
 
+function normalizeWhitespace(s: string): string {
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Single place for 詳細分析 layout: one paragraph when there is no additive text;
+ * never show lead + rest when rest duplicates lead (normalized).
+ */
+export function computeDetailAnalysisSections(
+  executiveSummary: string | null | undefined,
+  summary: string | null | undefined,
+): { lead: string | null; rest: string | null } {
+  const exec = executiveSummary?.trim() || null;
+  const sum = summary?.trim() || null;
+
+  if (!exec && !sum) return { lead: null, rest: null };
+  if (!exec) return { lead: null, rest: sum };
+
+  const stripped = sum
+    ? stripDuplicateExecutiveSummary(summary ?? null, executiveSummary ?? null)
+    : null;
+  let rest = stripped?.trim() || null;
+  if (!rest) return { lead: exec, rest: null };
+
+  const ne = normalizeWhitespace(exec);
+  let nr = normalizeWhitespace(rest);
+  if (nr === ne) return { lead: exec, rest: null };
+
+  if (nr.startsWith(ne)) {
+    const tail = nr.slice(ne.length).trim().replace(/^[\s,.;，。、]+/u, "");
+    rest = tail.length > 0 ? tail : null;
+    if (!rest) return { lead: exec, rest: null };
+    nr = normalizeWhitespace(rest);
+    if (nr === ne) return { lead: exec, rest: null };
+  }
+
+  return { lead: exec, rest };
+}
+
 /** Pick nested `seo_scan` or treat record as the scan object if it looks like one. */
 function unwrapSeoScan(input: unknown): Record<string, unknown> | null {
   if (input == null) return null;
@@ -192,7 +231,11 @@ export function normalizeSeoScanForUi(input: unknown): NormalizedSeoScan | null 
     toNumber(data.overallScore) ??
     toNumber(data.overall_score) ??
     toNumber(data.score) ??
-    toNumber(data.totalScore);
+    toNumber(data.totalScore) ??
+    toNumber(data.overall_rating) ??
+    toNumber(data.overallRating) ??
+    toNumber(data.audit_total) ??
+    toNumber(data.auditTotal);
 
   const executiveSummary = pickString(data, [
     "executiveSummary",
@@ -236,7 +279,15 @@ export function normalizeSeoScanForUi(input: unknown): NormalizedSeoScan | null 
     bullets = toStringArray(data.recommendations);
   }
 
-  const scores = normalizeScores(data.scores);
+  const scoresRaw =
+    data.scores ??
+    data.audit_scores ??
+    data.auditScores ??
+    data.dimension_scores ??
+    data.dimensionScores ??
+    data.rubric_scores ??
+    data.rubricScores;
+  const scores = normalizeScores(scoresRaw);
 
   const has =
     overallScore !== null ||

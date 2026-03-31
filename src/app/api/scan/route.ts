@@ -36,10 +36,14 @@ import {
   fetchPageSpeedInsightsMobile,
   type PageSpeedInsightsPayload,
 } from "@/lib/pagespeed-insights";
+import { parseModelJsonObject } from "@/lib/parse-model-json";
 import { normalizeSeoScanForUi } from "@/lib/seo-scan-normalize";
 import { DEFAULT_VENICE_MODEL, veniceChatJson } from "@/lib/venice";
 
 const MAX_COMPETITOR_URLS = 3;
+
+/** Next.js (e.g. Vercel): allow long scans. Cloudflare Workers use separate CPU limits — see DEPLOY.md. */
+export const maxDuration = 300;
 
 const bodySchema = z.object({
   url: z.string().min(4).max(2048),
@@ -50,19 +54,6 @@ const bodySchema = z.object({
     .max(MAX_COMPETITOR_URLS)
     .optional(),
 });
-
-function parseJsonObject(text: string): Record<string, unknown> {
-  const trimmed = text.trim();
-  const start = trimmed.indexOf("{");
-  const end = trimmed.lastIndexOf("}");
-  const slice =
-    start >= 0 && end > start ? trimmed.slice(start, end + 1) : trimmed;
-  const parsed = JSON.parse(slice) as unknown;
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("Model output was not a JSON object");
-  }
-  return parsed as Record<string, unknown>;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -169,35 +160,6 @@ export async function POST(request: NextRequest) {
       page.finalUrl,
       maxExtra,
     );
-    const additionalSiteFacts: SeoFacts[] = [];
-    const siteCrawlPages: Array<{ url: string; ok: boolean; error?: string }> = [
-      { url: page.finalUrl, ok: true },
-    ];
-    for (const href of extraUrls) {
-      try {
-        const u = await normalizeAndAssertSafeUrl(href);
-        const extraPage = await fetchPageHtml(u.href);
-        additionalSiteFacts.push(
-          extractSeoFacts({
-            url: u.href,
-            finalUrl: extraPage.finalUrl,
-            status: extraPage.status,
-            html: extraPage.html,
-            headerPairs: extraPage.headerPairs,
-          }),
-        );
-        siteCrawlPages.push({ url: u.href, ok: true });
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "fetch_failed";
-        siteCrawlPages.push({ url: href, ok: false, error: msg });
-      }
-    }
-
-    const siteCrawl = {
-      total_pages: 1 + additionalSiteFacts.length,
-      extra_requested: extraUrls.length,
-      pages: siteCrawlPages,
-    };
 
     const apiKey = requireEnv("VENICE_API_KEY");
     const model = getEnv("VENICE_MODEL") ?? DEFAULT_VENICE_MODEL;
@@ -222,19 +184,62 @@ export async function POST(request: NextRequest) {
       filter_notes?: string;
     };
 
-    if (rawCompetitorUrls.length > 0) {
+    /** Extra same-site fetches run in parallel with automatic competitor discovery (only needs primary `facts`). */
+    const extraPagesPromise = (async () => {
+      const additionalSiteFacts: SeoFacts[] = [];
+      const siteCrawlPages: Array<{ url: string; ok: boolean; error?: string }> = [
+        { url: page.finalUrl, ok: true },
+      ];
+      for (const href of extraUrls) {
+        try {
+          const u = await normalizeAndAssertSafeUrl(href);
+          const extraPage = await fetchPageHtml(u.href);
+          additionalSiteFacts.push(
+            extractSeoFacts({
+              url: u.href,
+              finalUrl: extraPage.finalUrl,
+              status: extraPage.status,
+              html: extraPage.html,
+              headerPairs: extraPage.headerPairs,
+            }),
+          );
+          siteCrawlPages.push({ url: u.href, ok: true });
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "fetch_failed";
+          siteCrawlPages.push({ url: href, ok: false, error: msg });
+        }
+      }
+      return { additionalSiteFacts, siteCrawlPages };
+    })();
+
+    const discoveryPromise =
+      rawCompetitorUrls.length > 0
+        ? Promise.resolve({ kind: "user" as const })
+        : discoverCompetitorUrlsAuto({
+            primaryHref: safe.href,
+            facts,
+            limit: MAX_COMPETITOR_URLS,
+            apiKey,
+            model,
+          }).then((auto) => ({ kind: "auto" as const, auto }));
+
+    const [extraResult, disc] = await Promise.all([extraPagesPromise, discoveryPromise]);
+
+    const { additionalSiteFacts, siteCrawlPages } = extraResult;
+
+    const siteCrawl = {
+      total_pages: 1 + additionalSiteFacts.length,
+      extra_requested: extraUrls.length,
+      pages: siteCrawlPages,
+    };
+
+    if (disc.kind === "user") {
       competitorDiscovery = {
         mode: "user",
         strategy: resolveCompetitorDiscoveryStrategy(),
       };
     } else {
-      const auto = await discoverCompetitorUrlsAuto({
-        primaryHref: safe.href,
-        facts,
-        limit: MAX_COMPETITOR_URLS,
-        apiKey,
-        model,
-      });
+      const auto = disc.auto;
       rawCompetitorUrls = auto.urls;
       discoveryUsage = auto.usage;
       const strat = resolveCompetitorDiscoveryStrategy();
@@ -328,7 +333,7 @@ export async function POST(request: NextRequest) {
 
     let obj: Record<string, unknown>;
     try {
-      obj = parseJsonObject(text);
+      obj = parseModelJsonObject(text);
     } catch (e) {
       if (consumedGlobal) {
         await refundGlobalFreeScanQuota();
@@ -370,6 +375,7 @@ export async function POST(request: NextRequest) {
         : {}),
     });
   } catch (e) {
+    console.error("[api/scan]", e);
     const message = e instanceof Error ? e.message : "發生錯誤";
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -171,7 +171,7 @@ const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 const SCAN_LOADING_STEPS = [
   {
     title: "讀取你嘅頁面",
-    detail: "下載公開內容；若已設定 Google PageSpeed，會一併拉實驗室分數。",
+    detail: "下載公開內容；同時會攞 Google PageSpeed（Lighthouse）分數。",
   },
   {
     title: "揀競爭對手",
@@ -525,7 +525,7 @@ export function ScanForm() {
                   href="#report-scores"
                   className="crawlme-focus-ring inline-flex min-h-[44px] items-center rounded-lg px-2 py-1 text-amber-200/90 hover:bg-white/[0.06] hover:text-amber-50"
                 >
-                  綜合分
+                  總分
                 </a>
                 <span className="text-white/20">·</span>
               </>

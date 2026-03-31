@@ -5,7 +5,7 @@ import { useCallback, useState, type ReactNode } from "react";
 import type { PageSpeedInsightsPayload } from "@/lib/pagespeed-insights";
 import type { SeoFacts } from "@/lib/seo-extract";
 import { computeUnifiedScore } from "@/lib/report-score";
-import { normalizeSeoScanForUi, stripDuplicateExecutiveSummary } from "@/lib/seo-scan-normalize";
+import { computeDetailAnalysisSections, normalizeSeoScanForUi } from "@/lib/seo-scan-normalize";
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
@@ -85,30 +85,17 @@ export function SeoScanPanel({
   }
 
   const overall = norm.overallScore;
-  const summary = norm.summary;
-  const detailAnalysis =
-    norm.executiveSummary && summary
-      ? stripDuplicateExecutiveSummary(summary, norm.executiveSummary)
-      : summary;
+  const { lead: detailLead, rest: detailRest } = computeDetailAnalysisSections(
+    norm.executiveSummary,
+    norm.summary,
+  );
   const bullets = norm.bullets;
   const scores = norm.scores;
 
+  const hasDetailSection = Boolean(detailLead?.trim() || detailRest?.trim());
+
   return (
     <div className="space-y-6">
-      {norm.executiveSummary ? (
-        <div>
-          <p className="text-[11px] font-semibold tracking-wide text-white/50">重點摘要</p>
-          <p className="mt-2 text-base font-medium leading-relaxed text-white/95">{norm.executiveSummary}</p>
-        </div>
-      ) : null}
-
-      {!norm.executiveSummary && summary ? (
-        <div>
-          <p className="text-[11px] font-semibold tracking-wide text-white/50">重點摘要</p>
-          <p className="mt-2 text-sm leading-relaxed text-foreground-muted">{summary}</p>
-        </div>
-      ) : null}
-
       {!hideOverallScore && overall !== null ? (
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="text-3xl font-semibold tabular-nums text-amber-200">{Math.round(overall)}</span>
@@ -142,6 +129,18 @@ export function SeoScanPanel({
         </ul>
       ) : null}
 
+      {hasDetailSection ? (
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wider text-white/50">詳細分析</p>
+          {detailLead ? (
+            <p className="mt-2 text-base font-medium leading-relaxed text-white/95">{detailLead}</p>
+          ) : null}
+          {detailRest ? (
+            <p className="mt-2 text-sm leading-relaxed text-foreground-muted">{detailRest}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       {norm.strengths.length > 0 ? (
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-emerald-200/75">已做得唔錯</p>
@@ -150,13 +149,6 @@ export function SeoScanPanel({
               <li key={i}>{b}</li>
             ))}
           </ul>
-        </div>
-      ) : null}
-
-      {norm.executiveSummary && detailAnalysis ? (
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-white/50">詳細分析</p>
-          <p className="mt-2 text-sm leading-relaxed text-foreground-muted">{detailAnalysis}</p>
         </div>
       ) : null}
 
@@ -468,6 +460,7 @@ function CompetitorFavicon({ pageUrl }: { pageUrl: string }) {
       width={36}
       height={36}
       sizes="36px"
+      unoptimized
       className="h-9 w-9 shrink-0 rounded-lg bg-white/[0.06] object-contain ring-1 ring-white/10"
       loading="lazy"
       onError={() => setErr(true)}
@@ -767,7 +760,7 @@ export function UnifiedScorePanel({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight text-white">綜合分</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-white">總分</h2>
         <div className="mt-4 flex flex-wrap items-baseline gap-3">
           <span className="text-4xl font-semibold tabular-nums text-emerald-200">{composite}</span>
           <span className="text-sm text-foreground-muted">／100</span>
@@ -775,21 +768,22 @@ export function UnifiedScorePanel({
         <p className="mt-2 text-[11px] leading-relaxed text-foreground-subtle">
           {psiAvg !== null && aiOverall !== null ? (
             <>
-              上面大數字＝（Google 四項 Lab 平均{" "}
-              <span className="tabular-nums text-white/80">{psiAvg}</span>
-              {" + AI 報告評分 "}
+              （Google Lab 平均 <span className="tabular-nums text-white/80">{psiAvg}</span>
+              {" + AI "}
               <span className="tabular-nums text-white/80">{aiOverall}</span>
-              ）÷ 2。AI 一邊優先用報告總分；若模型冇填總分，會用五維（標題／Meta／結構／內容／技術）平均分。
+              ）÷ 2
+              <span className="text-white/50"> · </span>
+              AI 取報告總分；冇總分則用五維平均。
             </>
           ) : psiAvg !== null ? (
             <>
-              上面大數字＝ Google PageSpeed 四項（效能、無障礙、最佳實踐、搜尋 Lab）嘅算術平均。AI
-              報告冇可用數字（冇總分又冇五維分項），所以未能同 AI 拉平均。
+              ＝ Google Lab 四項平均。AI 報告有出，但未有數字化評分（報告總分或五維分項），總分暫時只計
+              Lab。
             </>
           ) : (
             <>
-              僅 AI 報告總分 <span className="tabular-nums text-white/80">{aiOverall}</span>
-              （未有 Google Lab 分項）。
+              ＝ AI 報告評分 <span className="tabular-nums text-white/80">{aiOverall}</span>
+              （未跑 Google Lab）。
             </>
           )}
         </p>

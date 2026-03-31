@@ -33,8 +33,9 @@ export type UnifiedScoreParts = {
 };
 
 /**
- * Headline "綜合分": (1) If both PageSpeed + AI audit number exist → average of **psiAvg** and **aiOverall**.
+ * Headline "總分": (1) If both PageSpeed + AI audit number exist → average of **psiAvg** and **aiOverall**.
  * **aiOverall** = `seo_scan.overallScore` when set; else **mean of `seo_scan.scores` five dimensions** when the model omitted the headline number.
+ * If the model returned prose but **no** overall or dimension numbers, **aiOverall** is null — headline uses Lab only (not “no AI run”).
  * (2) If only PageSpeed → **psiAvg** only.
  * (3) If only audit → **aiOverall** only.
  */
