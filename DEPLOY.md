@@ -87,7 +87,7 @@ If deploy fails on **KV id**, fix the id in `wrangler.jsonc` or set `CLOUDFLARE_
 
 - **Align secrets:** Worker **Variables and Secrets** should use the same **`VENICE_API_KEY`** and **`VENICE_MODEL`** as your working `.env` / `.env.local`. An **empty or placeholder `VENICE_MODEL`** in the dashboard used to send `model: ""` to the API (now guarded — still fix the value).
 - **Larger pages in prod:** Real URLs can produce a bigger `PAGE_FACTS` JSON than your local test URL → harder completion; try fewer extra pages or a model with a larger context.
-- **`finish_reason=length` / empty reply:** The model ran out of **output** budget. Large `PAGE_FACTS` (especially huge `responseHeaders` from CDNs) steal context. The app **slims headers + heading samples** in Venice prompts only; you can also raise **`VENICE_CONTEXT_WINDOW_TOKENS`** (e.g. `65536`) if your Venice model supports it. Search logs for **`[venice_empty]`** for token counts and `rawPreview`.
+- **`finish_reason=length` / empty reply:** The model ran out of **output** budget. Raising **`VENICE_CONTEXT_WINDOW_TOKENS`** alone is **not enough** if **`max_tokens`** was still capped at **16384** by the app — set **`VENICE_MAX_COMPLETION_TOKENS`** (e.g. `32768`) and a matching or larger context window; the app default is now **32768** for the completion ceiling. Large `PAGE_FACTS` also steals room — prompts **slim headers** in code. Search logs for **`[venice_empty]`**.
 
 ### Internal Server Error (500) on `GET /`
 

@@ -9,10 +9,18 @@ const DEFAULT_VENICE_FETCH_TIMEOUT_MS = 180_000;
 export const DEFAULT_VENICE_MODEL = "openai-gpt-54-mini";
 
 /**
- * Venice defaults `max_tokens` to 16384; long prompts + that default exceed 32k context.
- * We cap completion tokens so prompt + max_tokens ≤ context window.
+ * Ceiling for a single completion (`max_tokens`). Venice defaults to 16384, but large
+ * `json_object` scans can need more — **only raising VENICE_CONTEXT_WINDOW_TOKENS is not
+ * enough** if this ceiling stays at 16384: `Math.min(16384, room)` caps output anyway.
  */
-const VENICE_DEFAULT_MAX_COMPLETION = 16384;
+function maxCompletionCeiling(): number {
+  const raw = getEnv("VENICE_MAX_COMPLETION_TOKENS");
+  if (!raw) return 32768;
+  const n = Number.parseInt(raw.trim(), 10);
+  if (Number.isFinite(n) && n >= 1024 && n <= 131072) return n;
+  return 32768;
+}
+
 const CONTEXT_SAFETY_MARGIN = 256;
 /**
  * Floor for `max_tokens`. Too low → the model stops mid-JSON and strings look "trimmed"
@@ -44,7 +52,7 @@ export function clampVeniceMaxCompletionTokens(
   const estIn = estimatePromptTokens(messages);
   const room = window - estIn - CONTEXT_SAFETY_MARGIN;
   const cap = Math.min(
-    VENICE_DEFAULT_MAX_COMPLETION,
+    maxCompletionCeiling(),
     Math.max(MIN_COMPLETION_TOKENS, room),
   );
   return cap;
