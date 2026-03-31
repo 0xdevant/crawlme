@@ -185,18 +185,22 @@ export async function veniceChatJson(params: {
   if (!text.trim()) {
     const fr = choice0?.finish_reason ?? choice0?.stop_reason ?? "?";
     const model = data.model ?? "?";
-    const usageHint = data.usage
-      ? ` prompt_tokens=${data.usage.prompt_tokens ?? "?"} completion_tokens=${data.usage.completion_tokens ?? "?"}`
-      : "";
+    const estPromptChars = params.messages.reduce((s, m) => s + (m.content?.length ?? 0), 0);
     const rawPreview = JSON.stringify(data).slice(0, 1200);
-    console.error("[venice] empty assistant content", {
-      model: modelId,
-      maxTokens,
-      estPromptChars: params.messages.reduce((s, m) => s + (m.content?.length ?? 0), 0),
-      finish_reason: fr,
-      usage: usageHint,
-      rawPreview,
-    });
+    // One line so Cloudflare log search always has diagnostics (some dashboards truncate Error.message on console.error(e)).
+    console.error(
+      `[venice_empty] ${JSON.stringify({
+        requestModel: modelId,
+        responseModel: model,
+        finish_reason: fr,
+        maxTokens,
+        estPromptChars,
+        prompt_tokens: data.usage?.prompt_tokens ?? null,
+        completion_tokens: data.usage?.completion_tokens ?? null,
+        choicesLen: data.choices?.length ?? 0,
+        rawPreview,
+      })}`,
+    );
     const hint =
       fr === "length"
         ? "（可能觸發輸出長度上限 — 可縮短 prompt、或設 VENICE_CONTEXT_WINDOW_TOKENS 更大若模型支援）"
