@@ -4,7 +4,7 @@ Insights runs on **Cloudflare Workers** via [`@opennextjs/cloudflare`](https://o
 
 ### Migrating from the old `crawlme` worker name
 
-Deploying with `wrangler.jsonc` `name: "insights"` creates or updates a Worker named **insights**, not **crawlme**. After the first deploy: attach your **custom domain** to **insights** (and remove it from the old worker if you no longer need it), copy **Variables and Secrets** from the old Worker, and ensure **R2** bucket `insights-opennext-cache` exists (or change `bucket_name` back to your existing bucket if you prefer not to create a new one). KV **namespace id** in `wrangler.jsonc` can stay the same; only the **binding** name in code is `INSIGHTS_KV`.
+Deploying with `wrangler.jsonc` `name: "insights"` creates or updates a Worker named **insights**, not **crawlme**. After the first deploy: attach your **custom domain** to **insights** (and remove it from the old worker if you no longer need it), copy **Variables and Secrets** from the old Worker, and ensure **R2** bucket `insights-opennext-cache` exists (or change `bucket_name` back to your existing bucket if you prefer not to create a new one). KV **namespace id** in `wrangler.jsonc` can stay the same; the **binding** name in code is `INSIGHTS_KV`.
 
 ## 1. One-time: Cloudflare resources
 

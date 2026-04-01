@@ -15,6 +15,10 @@ import {
 import { PreviewActionImplementationSteps } from "@/components/ScanResultBlocks";
 import { computeUnifiedScore } from "@/lib/report-score";
 import {
+  buildScanReportMarkdown,
+  downloadMarkdownReport,
+} from "@/lib/export-report-markdown";
+import {
   INSTAGRAM_PROFILE_URL,
   THREADS_PROFILE_URL,
   THREADS_UNLOCK_POST_URL,
@@ -151,6 +155,8 @@ function SocialSupportStrip() {
 
 type ScanResponse = {
   error?: string;
+  /** Server asks client to reset Turnstile (e.g. timeout-or-duplicate). */
+  turnstileRetry?: boolean;
   signInRequired?: boolean;
   upgrade?: boolean;
   ipFreeExhausted?: boolean;
@@ -167,18 +173,6 @@ type ScanResponse = {
     impact?: string;
     /** Implementation steps (same shape as Pro `full_actions` steps). */
     steps?: unknown;
-  }>;
-  /** Free tier only: high-impact preview rows (blurred in Pro block) */
-  preview_high_impact?: Array<{
-    title?: string;
-    rationale?: string;
-    impact?: string;
-  }>;
-  /** Free tier only: blurred Pro upsell rows */
-  pro_teaser_actions?: Array<{
-    title?: string;
-    impact?: string;
-    hook?: string;
   }>;
   full_actions?: unknown;
   conversion_notes?: unknown;
@@ -265,15 +259,6 @@ function loadLastScanSession(
   }
 }
 
-function clearLastScanSession(userId: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    sessionStorage.removeItem(sessionScanStorageKey(userId));
-  } catch {
-    // ignore
-  }
-}
-
 /** Stable per-browser profile id (survives VPN IP changes; cleared if user wipes site data). */
 function getOrCreateDeviceId(): string {
   if (typeof window === "undefined") return "";
@@ -322,6 +307,8 @@ export function ScanForm() {
   const [freeGlobalLimit, setFreeGlobalLimit] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScanResponse | null>(null);
+  /** True after「分析另一個網址」— show hero form while last report stays below. */
+  const [preparingNewScan, setPreparingNewScan] = useState(false);
   const unified = useMemo(
     () =>
       result
@@ -329,6 +316,15 @@ export function ScanForm() {
         : null,
     [result],
   );
+  /** Report header URL when input was cleared for a new scan. */
+  const analyzedUrlForReport = useMemo(() => {
+    if (!result?.facts || typeof result.facts !== "object") return null;
+    const f = result.facts as { finalUrl?: string; url?: string };
+    const a = typeof f.finalUrl === "string" ? f.finalUrl.trim() : "";
+    if (a) return a;
+    const b = typeof f.url === "string" ? f.url.trim() : "";
+    return b || null;
+  }, [result]);
   const [error, setError] = useState<string | null>(null);
   const [turnstileError, setTurnstileError] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileInstance | null>(null);
@@ -399,6 +395,15 @@ export function ScanForm() {
   const needsTurnstile = Boolean(turnstileSiteKey);
   const isDev = process.env.NODE_ENV === "development";
 
+  const hasGlobalQuota =
+    freeGlobalRemaining !== null && freeGlobalLimit !== null;
+  const showQuotaInfobox =
+    isSignedIn &&
+    (paid === true ||
+      (!quotaBypass &&
+        (userAlreadyUsedFree || deviceAlreadyUsedFree || ipAlreadyUsedFree)) ||
+      hasGlobalQuota);
+
   const experienceBlocked =
     paid === false &&
     !quotaBypass &&
@@ -432,7 +437,6 @@ export function ScanForm() {
         return;
       }
 
-      setResult(null);
       setLoading(true);
       try {
         const body: {
@@ -460,22 +464,31 @@ export function ScanForm() {
           }
           if (res.status === 429 && data.upgrade) {
             setError(null);
+            setPreparingNewScan(false);
             setResult({ ...data, paid: false });
             void refreshMe();
+            return;
+          }
+          if (res.status === 400 && data.turnstileRetry && needsTurnstile) {
+            setTurnstileToken(null);
+            setTurnstileError(null);
+            turnstileRef.current?.reset();
+            setError(
+              data.error ??
+                "人機驗證已過期或已用過，請再撳「開始分析」取得新驗證。",
+            );
             return;
           }
           setError(data.error ?? `請求失敗（${res.status}）`);
           return;
         }
         setResult(data);
+        setPreparingNewScan(false);
         if (userId) {
           persistLastScanSession(userId, withHttpsScheme(url), data);
         }
         if (typeof data.paid === "boolean") setPaid(data.paid);
-        if (
-          data.paid === false &&
-          typeof data.freeGlobalRemaining === "number"
-        ) {
+        if (typeof data.freeGlobalRemaining === "number") {
           setFreeGlobalRemaining(data.freeGlobalRemaining);
         }
         if (typeof data.freeGlobalLimit === "number") {
@@ -540,39 +553,68 @@ export function ScanForm() {
   );
 
   const hasSuccessResult = Boolean(result && !result.error && !result.upgrade);
-  const showInputForm = !hasSuccessResult && !loading;
-  /** Hide marketing hero while analyzing or viewing report (focus on content). */
-  const showMarketingHero = !loading && !hasSuccessResult;
+  /** First visit or「分析另一個網址」— show URL form; hidden while loading so report can stay visible. */
+  const showMarketingHero =
+    (!loading && !hasSuccessResult) || (preparingNewScan && !loading);
 
   const resetToNewScan = useCallback(() => {
-    if (userId) clearLastScanSession(userId);
-    setResult(null);
+    setPreparingNewScan(true);
     setError(null);
     setTurnstileToken(null);
     pendingSubmitAfterTurnstileRef.current = false;
     turnstileRef.current?.reset();
-  }, [userId]);
+    setUrl("");
+    queueMicrotask(() => {
+      document
+        .getElementById("scan-hero-anchor")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, []);
+
+  const exportReportAsMarkdown = useCallback(() => {
+    if (!result) return;
+    const analyzed =
+      analyzedUrlForReport ?? (url.trim() ? withHttpsScheme(url) : "");
+    if (!analyzed) return;
+    const md = buildScanReportMarkdown(result, { analyzedUrl: analyzed });
+    downloadMarkdownReport(md, analyzed);
+  }, [analyzedUrlForReport, result, url]);
 
   return (
     <div className="flex flex-col gap-10">
       {showMarketingHero ? (
         <>
           <section
+            id="scan-hero-anchor"
             className="rounded-[1.75rem] bg-secondary-container px-5 py-10 shadow-ambient sm:px-10 sm:py-12"
             aria-labelledby="hero-heading"
           >
             <div className="mx-auto max-w-3xl text-center">
-              <header className="space-y-4">
-                <h1
-                  id="hero-heading"
-                  className="font-headline text-balance text-3xl font-bold tracking-tight text-on-surface sm:text-4xl md:text-5xl"
-                >
-                  拎一份專業營銷報告
-                </h1>
-                <p className="mx-auto max-w-xl text-pretty text-base leading-relaxed text-foreground-muted sm:text-lg">
-                  SEO、市場、競爭對手同 AI 分析，加上可以落手做嘅技術建議。
-                </p>
-              </header>
+              {preparingNewScan && hasSuccessResult ? (
+                <header className="space-y-2">
+                  <h2
+                    id="hero-heading"
+                    className="font-headline text-xl font-semibold tracking-tight text-on-surface sm:text-2xl"
+                  >
+                    新增分析
+                  </h2>
+                  <p className="mx-auto max-w-lg text-pretty text-xs leading-relaxed text-foreground-muted sm:text-sm">
+                    上次報告仍會喺下面；新分析完成後會取代。你可以繼續向下瀏覽。
+                  </p>
+                </header>
+              ) : (
+                <header className="space-y-4">
+                  <h1
+                    id="hero-heading"
+                    className="font-headline text-balance text-3xl font-bold tracking-tight text-on-surface sm:text-4xl md:text-5xl"
+                  >
+                    拎一份專業營銷報告
+                  </h1>
+                  <p className="mx-auto max-w-xl text-pretty text-base leading-relaxed text-foreground-muted sm:text-lg">
+                    SEO、市場、競爭對手同 AI 分析，加上可以落手做嘅技術建議。
+                  </p>
+                </header>
+              )}
 
               {!isLoaded ? (
                 <div className="mx-auto mt-8 max-w-2xl">
@@ -669,19 +711,7 @@ export function ScanForm() {
                       </div>
                     </div>
                   ) : null}
-                  {isSignedIn &&
-                  (paid === true ||
-                    (!quotaBypass &&
-                      (userAlreadyUsedFree ||
-                        deviceAlreadyUsedFree ||
-                        ipAlreadyUsedFree)) ||
-                    (!quotaBypass &&
-                      freeGlobalRemaining !== null &&
-                      freeGlobalLimit !== null) ||
-                    (isDev &&
-                      quotaBypass &&
-                      freeGlobalRemaining !== null &&
-                      freeGlobalLimit !== null)) ? (
+                  {showQuotaInfobox ? (
                     <div className="space-y-3 rounded-xl border border-outline-variant/15 bg-surface-container-lowest px-3 py-3 text-left text-xs text-foreground-muted shadow-sm">
                       {paid === true ? (
                         <p className="text-foreground-subtle">
@@ -699,9 +729,7 @@ export function ScanForm() {
                         <p className="text-primary">
                           呢個 IP 已用過體驗額度。聽日再試、換網絡，或聯絡我哋。
                         </p>
-                      ) : freeGlobalRemaining !== null &&
-                        freeGlobalLimit !== null &&
-                        (!quotaBypass || isDev) ? (
+                      ) : hasGlobalQuota ? (
                         <div className="border-l-2 border-primary/35 pl-3">
                           <p className="font-medium text-primary">額度說明</p>
                           <p className="mt-1 text-foreground-subtle">
@@ -711,9 +739,11 @@ export function ScanForm() {
                             </span>
                             ／{freeGlobalLimit} 個名額（先到先得）。
                           </p>
-                          {quotaBypass && isDev ? (
+                          {quotaBypass ? (
                             <p className="mt-2 text-[10px] leading-snug text-on-surface-variant">
-                              開發模式：本機已略過額度限制，仍可照常分析。
+                              {isDev
+                                ? "開發模式：本機已略過額度限制，仍可照常分析。"
+                                : "你的連線已略過體驗額度限制；以上為全站今日名額參考。"}
                             </p>
                           ) : null}
                         </div>
@@ -724,7 +754,7 @@ export function ScanForm() {
               )}
             </div>
           </section>
-          <ReportDepthSection />
+          {!hasSuccessResult ? <ReportDepthSection /> : null}
         </>
       ) : null}
 
@@ -813,19 +843,29 @@ export function ScanForm() {
                   ? "已掃描同站數個頁面。"
                   : "已分析你貼嘅頁面。"}
               </p>
-              {url.trim() && unified?.composite === null ? (
+              {(analyzedUrlForReport ?? url.trim()) &&
+              unified?.composite === null ? (
                 <p className="break-all rounded-lg border border-outline-variant/15 bg-surface-container-low px-3 py-2 font-mono text-[11px] leading-snug text-foreground-muted">
-                  {withHttpsScheme(url)}
+                  {analyzedUrlForReport ?? withHttpsScheme(url)}
                 </p>
               ) : null}
             </div>
-            <button
-              type="button"
-              onClick={resetToNewScan}
-              className="insights-focus-ring shrink-0 rounded-xl border border-outline-variant/20 bg-surface-container-high px-4 py-2 text-sm font-medium text-on-surface transition hover:bg-surface-container-high"
-            >
-              分析另一個網址
-            </button>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={exportReportAsMarkdown}
+                className="insights-focus-ring rounded-xl border border-outline-variant/20 bg-surface-container-lowest px-4 py-2 text-sm font-medium text-primary transition hover:bg-surface-container-high"
+              >
+                匯出 Markdown（.md）
+              </button>
+              <button
+                type="button"
+                onClick={resetToNewScan}
+                className="insights-focus-ring rounded-xl border border-outline-variant/20 bg-surface-container-high px-4 py-2 text-sm font-medium text-on-surface transition hover:bg-surface-container-high"
+              >
+                分析另一個網址
+              </button>
+            </div>
           </div>
 
           <nav
@@ -891,7 +931,10 @@ export function ScanForm() {
                     pagespeedInsights={result.pagespeed_insights}
                     seoScan={result.seo_scan}
                     primaryFacts={result.facts}
-                    analyzedUrlFallback={withHttpsScheme(url)}
+                    analyzedUrlFallback={
+                      analyzedUrlForReport ??
+                      (url.trim() ? withHttpsScheme(url) : "")
+                    }
                   />
                 </div>
               ) : null}

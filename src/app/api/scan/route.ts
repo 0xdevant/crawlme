@@ -113,7 +113,6 @@ export async function POST(request: NextRequest) {
     const cookieStore = await cookies();
     const customerId = cookieStore.get("insights_customer")?.value;
     const sub = await getSubscriptionForCustomer(customerId);
-    /** Stripe subscription only — not used to gate report richness (honour unlock removed). */
     const isSubscriber = isActiveSubscription(sub);
 
     const globalLimit = getFreeGlobalDailyLimit();
@@ -419,7 +418,6 @@ export async function POST(request: NextRequest) {
       competitor_analysis: obj.competitor_analysis ?? null,
       full_actions: obj.full_actions ?? [],
       conversion_notes: obj.conversion_notes ?? null,
-      /** `true` only for active Stripe subscription — does not gate report content. */
       paid: isSubscriber,
       usage,
       facts,
