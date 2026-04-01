@@ -5,6 +5,7 @@ import { shadcn } from "@clerk/themes";
 import { JetBrains_Mono, Manrope, Noto_Sans_TC } from "next/font/google";
 import Link from "next/link";
 import { AuthHeader } from "@/components/AuthHeader";
+import { InAppBrowserBanner } from "@/components/InAppBrowserBanner";
 import { SiteHeaderLogo } from "@/components/SiteHeaderLogo";
 import { QUOTA_TRIAL_BODY } from "@/lib/quota-copy";
 import { CLAWIFY_URL, SITE_URL } from "@/lib/site";
@@ -94,6 +95,7 @@ export default function RootLayout({
               <AuthHeader />
             </div>
           </header>
+          <InAppBrowserBanner />
           {children}
         </ClerkProvider>
       </body>

@@ -16,10 +16,50 @@ function toNumber(v: unknown): number | null {
   return null;
 }
 
+/**
+ * 「已做得唔錯」— prompt 要求 `strengths` 為 string[]（見 scan-prompts），但有時會混入物件。
+ * 常見漂移：`{ text }`（同份 JSON 入面 steps 用 `text`）、`{ finding }`（同 priorityFindings 混淆）。
+ * 以下 key 按「最常撞到 → 次要」排；第一個非空字串就用。
+ */
+const STRENGTH_ITEM_STRING_KEYS = [
+  "text",
+  "strength",
+  "point",
+  "title",
+  "finding",
+  "summary",
+  "description",
+] as const;
+
+function strengthItemToString(x: unknown): string | null {
+  if (typeof x === "string") {
+    const t = x.trim();
+    return t.length > 0 ? t : null;
+  }
+  if (typeof x === "number" && Number.isFinite(x)) return String(x);
+  if (!isRecord(x)) return null;
+  for (const k of STRENGTH_ITEM_STRING_KEYS) {
+    const v = x[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
+/** `strengths` / `whats_working` only — coerces objects to a line of text. */
+function toStrengthsArray(v: unknown): string[] {
+  if (Array.isArray(v)) {
+    return v
+      .map(strengthItemToString)
+      .filter((s): s is string => s !== null && s.length > 0);
+  }
+  if (typeof v === "string" && v.trim()) return [v.trim()];
+  return [];
+}
+
 function toStringArray(v: unknown): string[] {
   if (Array.isArray(v)) {
     return v
-      .map((x) => (typeof x === "string" ? x.trim() : String(x)))
+      .map((x) => (typeof x === "string" ? x.trim() : ""))
       .filter(Boolean);
   }
   if (typeof v === "string" && v.trim()) return [v.trim()];
@@ -253,9 +293,9 @@ export function normalizeSeoScanForUi(input: unknown): NormalizedSeoScan | null 
         ? data.overview.trim()
         : null;
 
-  let strengths = toStringArray(data.strengths);
+  let strengths = toStrengthsArray(data.strengths);
   if (strengths.length === 0) {
-    strengths = toStringArray(data.whats_working);
+    strengths = toStrengthsArray(data.whats_working);
   }
 
   let priorityFindings = normalizePriorityFindings(data.priorityFindings ?? data.priority_findings);
