@@ -9,8 +9,9 @@ import {
   IconBolt,
   IconChartBar,
   IconCheckCircle,
+  IconCode,
   IconLightbulbWatermark,
-  IconServerStack,
+  IconPriority,
 } from "@/components/ReportDepthIcons";
 
 /** Crowd = shorter greys; standout = full-height primary (fixed Tailwind heights so flex never collapses). */
@@ -130,7 +131,7 @@ function ReportDepthSectionInner() {
 
         {/* Technical audit — md:col-span-4 */}
         <div className="group rounded-2xl bg-surface-container-lowest p-8 transition-shadow duration-300 hover:shadow-lg md:col-span-4 md:p-10">
-          <IconServerStack className="mb-4 h-9 w-9 text-tertiary" aria-hidden />
+          <IconCode className="mb-4 h-9 w-9 text-tertiary" aria-hidden />
           <h3 className="mb-2 font-headline text-2xl font-bold text-on-surface">
             技術審核
           </h3>
@@ -156,6 +157,7 @@ function ReportDepthSectionInner() {
         {/* Actionable — md:col-span-8 */}
         <div className="relative overflow-hidden rounded-2xl bg-surface-container-high p-8 md:col-span-8 md:p-10">
           <div className="relative z-10">
+            <IconPriority className="mb-4 h-9 w-9 text-primary" aria-hidden />
             <h3 className="mb-2 font-headline text-2xl font-bold text-on-surface">
               可執行嘅優先建議
             </h3>

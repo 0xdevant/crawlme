@@ -11,6 +11,24 @@ function stripCodeFence(text: string): string {
 }
 
 /**
+ * First ```…``` block containing `{` wins — avoids failing when the model puts prose or an empty
+ * fence before the real JSON block.
+ */
+function firstFenceBlockContainingBrace(text: string): string | null {
+  const re = /```(?:json)?\s*([\s\S]*?)```/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const inner = m[1].trim();
+    if (inner.includes("{")) return inner;
+  }
+  return null;
+}
+
+function normalizeModelText(text: string): string {
+  return text.replace(/\uFEFF/g, "").trim();
+}
+
+/**
  * Extract first top-level `{ … }` using string-aware brace matching (so `}` inside strings does not truncate).
  * Returns null if there is no closing brace (e.g. truncated output).
  */
@@ -44,10 +62,34 @@ function extractBalancedObject(src: string, start: number): string | null {
 }
 
 function extractFirstJsonObjectBlob(text: string): string {
-  const s = stripCodeFence(text);
+  const raw = normalizeModelText(text);
+  if (!raw) {
+    throw new Error(
+      "Model output was empty — try again, shorten the URL / fewer extra pages, or switch VENICE_MODEL.",
+    );
+  }
+
+  let s = stripCodeFence(raw);
+  if (s.indexOf("{") < 0) {
+    const fromFence = firstFenceBlockContainingBrace(raw);
+    if (fromFence) s = fromFence;
+  }
+  if (s.indexOf("{") < 0) {
+    const idx = raw.indexOf("{");
+    if (idx >= 0) s = raw.slice(idx);
+  }
+
   const start = s.indexOf("{");
   if (start < 0) {
-    throw new Error("Model output did not contain a JSON object");
+    const preview = raw.length > 500 ? `${raw.slice(0, 500)}…` : raw;
+    const head = raw.trimStart().slice(0, 1);
+    const hint =
+      head === "["
+        ? " (output starts with `[` — expected a JSON object `{…}`, not an array.)"
+        : "";
+    throw new Error(
+      `Model output did not contain a JSON object${hint}. len=${raw.length} preview=${JSON.stringify(preview)}`,
+    );
   }
   const balanced = extractBalancedObject(s, start);
   if (balanced) return balanced;

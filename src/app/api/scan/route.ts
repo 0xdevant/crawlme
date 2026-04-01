@@ -46,8 +46,8 @@ import { resolveVeniceModel, veniceChatJson } from "@/lib/venice";
 
 const MAX_COMPETITOR_URLS = 3;
 
-/** Next.js (e.g. Vercel): allow long scans. Cloudflare Workers use separate CPU limits — see DEPLOY.md. */
-export const maxDuration = 300;
+/** Next.js / edge: allow long scans (crawl + large JSON to Venice). Must exceed Venice wall-clock; see `VENICE_FETCH_TIMEOUT_MS`. */
+export const maxDuration = 600;
 
 const bodySchema = z.object({
   url: z.string().min(4).max(2048),

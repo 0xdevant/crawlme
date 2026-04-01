@@ -14,77 +14,47 @@ function additionalSiteFactsBlock(pages: SeoFacts[]): string {
   return JSON.stringify(pages.map(slimSeoFactsForVenicePrompt));
 }
 
-/**
- * Marketing report framing: evidence stays crawl/HTML-only; no invented rankings or ad spend.
- * Bridge to 營銷 by tying search + page UX to acquisition and conversion *without* claiming off-page data.
- */
+/** Evidence = crawl/HTML only; no invented off-page metrics. */
 const MARKETING_REPORT_FOCUS =
-  "**Goal:** agency-style **數碼營銷報告** from **HTML + headers only** — scope, evidence-led findings, fixes, verification. " +
-  "For **marketing**: SERP/snippet, H1/headings/messaging, trust (HTTPS, schema, security headers), **discoverability + landing effectiveness**; include technical SEO depth (index signals, canonical/robots, links, JSON-LD, image alt). " +
-  "Cite PAGE_FACTS fields or say unknown. **Never** invent CWV field data, rankings, backlinks, GSC, ads, crawl budget, social reach. " +
-  "Tone: precise, non-hype. Solid basics in facts → **high** `scores` / `overallScore` (often 80–95+); rest = polish. Snapshot audit ≠ Lighthouse SEO score. " +
-  "`auditScope`: **香港繁體**, no English disclaimer boilerplate.";
+  "**Goal:** **數碼營銷報告** from **HTML + headers only** — scope, evidence-led findings, fixes. " +
+  "Cover: SERP/snippet, H1/headings/messaging, trust (HTTPS, schema, security headers), discoverability + landing; technical SEO (index signals, canonical/robots, links, JSON-LD, image alt). " +
+  "Cite PAGE_FACTS or say unknown. **Never** invent CWV field values, rankings, backlinks, GSC, ads, crawl budget, social reach. " +
+  "Tone: precise, non-hype. Solid facts → high `scores`/`overallScore` (often 80–95+). Snapshot audit ≠ Lighthouse SEO score.";
 
-/** Every Chinese string in JSON must be HK Traditional; models often slip into 简体 — forbid explicitly. */
-const HK_TRADITIONAL_CHINESE_ONLY =
-  "**Chinese (all `seo_scan`, actions, hooks, `competitor_analysis`):** **香港繁體** only — **no 简体** (e.g. 网络、质量、应该、点击、登录). HK: 網絡、質素、應該、點擊、登入；**無須／毋須、編碼** not 无需、编码. " +
-  "If PAGE_FACTS use 简体 in title/meta/headings, **rewrite in 繁體** in prose; **≤1** short verbatim quote for evidence. No mixed 繁+简 in one sentence. JSON keys: camelCase English. ";
+const HK_TRADITIONAL_AND_PROSE =
+  "**Chinese (seo_scan, actions, hooks, competitor_analysis):** **香港繁體** only — **no 简体**; rewrite source 简体 in facts to 繁體 (≤1 short quote for evidence). JSON keys: camelCase English. " +
+  "**書面語:** short sentences, one main point each; gloss terms on first mention (LCP、JSON-LD、canonical); concrete fixes not vague「優化」; `executiveSummary`≠`summary` opening; readable by a non-engineer marketer.";
 
-/**
- * Plain readable 書面語 — stakeholder-facing; matches /clarify-style goals (concrete, no unexplained jargon).
- */
-const WRITTEN_CHINESE_CLARITY =
-  "**Prose style (書面語、易讀):** Use **formal HK 繁體書面語** — clear and professional, not 口語堆砌 or slogan-like hype. " +
-  "**Short sentences** where possible; **one main point per sentence**; avoid repeating the same opening in `executiveSummary` vs `summary`. " +
-  "**Explain terms on first mention** in plain 繁體 (e.g. 規範網址（canonical）、結構化資料（JSON-LD）、最大內容渲染（LCP）) — do **not** leave English-only acronyms in body text without a Chinese gloss. " +
-  "**Concrete actions:** prefer「改寫標題以…」「補上圖片替代文字」over vague「優化」「提升」without saying what changes. " +
-  "`executiveSummary` / `summary` / findings / rationales: a **marketer without engineering background** should follow the gist. ";
+/** On-page compare + heading advice (evidence-led). */
+const ON_PAGE_COMPETITOR_AND_HEADINGS =
+  "If COMPETITOR_PAGE_FACTS non-empty: compare **on-page** only (title/meta/H1, schema, headings, tech) — not SERP/backlinks/ads; else `competitor_analysis` null. " +
+  "If few H2/H3 vs long copy, recommend subheadings — cite `headingCounts`/h1/h2; no invented quotes.";
 
-/** When facts show weak sectioning, recommend more H2/H3 — evidence-led. */
-const HEADING_STRUCTURE_GUIDANCE =
-  "**Headings:** if facts show too few H2/H3 vs long copy, recommend more subheadings — cite `headingCounts`/`h1`/`h2`; no invented quotes. Compare competitors only via COMPETITOR JSON. ";
-
-const COMPETITOR_MINDSET =
-  "If COMPETITOR_PAGE_FACTS non-empty: compare **on-page** positioning (title/meta/H1), schema, headings, tech signals — **not** SERP/backlinks/ads. Empty competitors → `competitor_analysis` null. ";
-
-/** Avoid empty `competitor_themes: []` while `primary_themes` is full — confusing in UI. */
 const INFERRED_TOPIC_THEMES_RULE =
-  "**`inferred_topic_themes` (paid, competitors present):** `primary_themes` + `competitor_themes` = **2–5** HK phrases each from title/H1/meta/headings/schema in JSON. **Never** `competitor_themes: []` if `primary_themes` non-empty — infer, omit key, or one HK note (e.g. 對手字極少) + `limitations`. ";
+  "**`inferred_topic_themes` (paid, competitors):** `primary_themes` + `competitor_themes` = **2–5** HK phrases each from JSON title/H1/meta/headings/schema. **Never** `competitor_themes: []` when `primary_themes` non-empty — infer, omit key, or HK note (e.g. 對手字極少) + `limitations`.";
 
-/**
- * Stops generic “any website” steps (e.g. `<img src="image-url" alt="…">`) — every fix must tie to THIS crawl.
- */
 const SITE_SPECIFIC_IMPLEMENTATION_RULES =
-  "**`preview_actions` / `full_actions` / `steps`:** tie every `title`, `rationale`, `steps[].text` to **this crawl** — cite PAGE_FACTS (`title`, `h1`, `metaDescription`, `canonical`, `headingCounts`, `imagesMissingAlt`/`imagesTotal`, headers, schema, etc.). Say what's wrong + fix; **no** generic tutorials. " +
-  "**Forbidden:** placeholders (`example.com`, `image-url`, stock meta/img). **Omit `snippet`** unless grounded in facts; for images use counts + section from headings, not fake `<img>`. " +
-  "**Expandables:** `detail` must add value beyond `text` (no empty paraphrase; if `imagesMissingAlt` is 0, no fake alt-tweak expandables). With `snippet`, start `detail` with **「貼上位置：」/「適用位置：」** (file, header name, or DOM). **Do not** duplicate `snippet` text inside `detail` body.";
+  "**`preview_actions` / `full_actions` / `steps`:** tie to **this crawl** via PAGE_FACTS (title, h1, metaDescription, canonical, headingCounts, imagesMissingAlt/imagesTotal, headers, schema); issue + fix; no generic tutorials. " +
+  "No placeholders (example.com, image-url). Omit `snippet` unless factual; images: counts + heading context, not fake `<img>`. " +
+  "`detail` must add beyond `text` (skip fake alt tweaks if `imagesMissingAlt` is 0). With `snippet`, start `detail` with **「貼上位置：」/「適用位置：」**; do not duplicate `snippet` inside `detail`.";
 
-/**
- * Keeps scope honest without sounding like a legal disclaimer; model must follow this for `seo_scan.auditScope`.
- */
 function auditScopeInstruction(hasAdditionalPages: boolean): string {
-  const extra = hasAdditionalPages
-    ? " Mention **sampled** same-site URLs (not full crawl). "
-    : "";
+  const extra = hasAdditionalPages ? " Note sampled same-site URLs (not full crawl). " : "";
   return (
-    "`seo_scan.auditScope` — **香港繁體**, **1–2 sentences**: inputs = HTML+headers for submitted URL" +
+    "`seo_scan.auditScope`: **香港繁體**, **1–2 sentences** — HTML+headers for submitted URL" +
     extra +
-    "; competitors only if COMPETITOR_PAGE_FACTS non-empty. One line on what stakeholders can act on. " +
-    "**No** long exclusion lists, English boilerplate, or repeating this in `executiveSummary`/`summary`."
+    "; competitors only if COMPETITOR_PAGE_FACTS non-empty; what stakeholders can act on. " +
+    "No long exclusion lists, English boilerplate, or repeating this in `executiveSummary`/`summary`."
   );
 }
 
-/** JSON shape for `seo_scan` — camelCase only in model output. */
 const SEO_SCAN_SHAPE_FREE =
-  "`seo_scan` (camelCase): `executiveSummary` (2–3 sentences, **書面語易讀**, stakeholder, 商業/獲客風險 + evidence). " +
-    "`auditScope` per rule below. `overallScore` 0–100 **required** (aligns with `scores`). " +
-    "`scores`: title, meta, headings, content, technical each 0–100 (SERP title/meta, headings, depth+links, tech+schema+alts). " +
-    "`summary` 4–7 sentences, **書面語** — **no** duplicate opening vs `executiveSummary`; deeper evidence only. " +
-  "`strengths` string[] max 3. `priorityFindings` max 4 `{ priority, finding, evidence? }` P0=blockers P1=impact P2=polish; omit empty `evidence`. " +
-  "`verificationChecklist` max 4. `bullets` max 6 (non-duplicative).";
+  "`seo_scan`: `executiveSummary` (2–3 sentences, 書面語, risk + evidence); `auditScope` per rule below; `overallScore` 0–100 (align `scores`); " +
+  "`scores` title|meta|headings|content|technical each 0–100; `summary` 4–7 sentences, **no** duplicate opening vs `executiveSummary`; " +
+  "`strengths` ≤3 strings; `priorityFindings` ≤4 {priority,finding,evidence?} P0|P1|P2; `verificationChecklist` ≤4; `bullets` ≤6.";
 
 const SEO_SCAN_SHAPE_PAID =
-  "`seo_scan` same as free but: `strengths` ≤4, `priorityFindings` ≤8, `verificationChecklist` ≤8, `bullets` ≤10, `summary` 5–10 sentences **書面語易讀** — **no** duplicate exec opening.";
+  "`seo_scan` same as free but: `strengths` ≤4, `priorityFindings` ≤8, `verificationChecklist` ≤8, `bullets` ≤10, `summary` 5–10 sentences — **no** duplicate exec opening.";
 
 export function buildFreeScanPrompt(
   primary: SeoFacts,
@@ -99,45 +69,39 @@ export function buildFreeScanPrompt(
       content:
         "Senior **digital marketing + technical SEO** strategist; **營銷報告** from crawled HTML. " +
         (hasBreadth
-          ? "With ADDITIONAL_SAME_SITE_PAGE_FACTS: cross-page patterns (titles/metas/links/thin dup) — PRIMARY stays anchor. "
+          ? "ADDITIONAL_SAME_SITE_PAGE_FACTS: cross-page patterns (titles/metas/links/dup) — PRIMARY anchor. "
           : "") +
         MARKETING_REPORT_FOCUS +
         " " +
-        COMPETITOR_MINDSET +
+        ON_PAGE_COMPETITOR_AND_HEADINGS +
         " " +
         SITE_SPECIFIC_IMPLEMENTATION_RULES +
         " " +
-        HK_TRADITIONAL_CHINESE_ONLY +
-        " " +
-        WRITTEN_CHINESE_CLARITY +
-        HEADING_STRUCTURE_GUIDANCE +
-        " JSON only. **Free tier:** 3× `preview_actions` (evidence-based search/landing fixes; `title`, `rationale`, `impact?`, **steps** 3–6 objects: `text`, optional `detail`/`snippet` plain text). Site-specific only. " +
-        "3× `pro_teaser_actions` (`title`, `impact`, `hook` one line) — different titles from previews; no steps/snippets.",
+        HK_TRADITIONAL_AND_PROSE +
+        " JSON only — **one** root `{…}` object; no prose before `{`. **Free:** 3× `preview_actions` (`title`, `rationale`, `impact?`, **steps** 3–6×{`text`, optional `detail`/`snippet`}). " +
+        "3× `pro_teaser_actions` (`title`, `impact`, `hook` one line) — titles ≠ previews; no steps/snippets.",
     },
     {
       role: "user",
       content:
-        "**營銷導向審計** (search + landing + tech) of PRIMARY from facts below. " +
-        (hasBreadth ? "ADDITIONAL_* = sampled breadth, not full crawl. " : "") +
+        "**營銷導向審計** (search + landing + tech) from PRIMARY below. " +
+        (hasBreadth ? "ADDITIONAL_* = sampled breadth. " : "") +
         (hasComp ? "COMPETITOR_* → `competitor_analysis`. " : "") +
-        "Return JSON with keys: " +
+        "Return JSON: " +
         SEO_SCAN_SHAPE_FREE +
-        "`preview_actions` (3, steps required), " +
-        "`pro_teaser_actions` (exactly 3 objects: title, impact high|medium|low, hook string — one-line teaser only), " +
+        " `preview_actions` (3, steps required); `pro_teaser_actions` (3×: title, impact high|medium|low, hook one line); " +
         (hasComp
-          ? "`competitor_analysis` (object: methodology_limits string; snapshot_summary string; " +
-            "top_gaps string array max 4 technical/content gaps vs competitors; differentiation_hooks string array max 3 **SEO / 定位 / 訊息** angles visible from snapshots). "
+          ? "`competitor_analysis` { methodology_limits, snapshot_summary, top_gaps[]≤4, differentiation_hooks[]≤3 (SEO/定位/訊息 from snapshots) }. "
           : "`competitor_analysis` null. ") +
         "\n\nPRIMARY_PAGE_FACTS:\n" +
         factsBlock(primary) +
-        "\n\nADDITIONAL_SAME_SITE_PAGE_FACTS (same schema; empty array if none — extra pages on the same host sampled via links from the primary page):\n" +
+        "\n\nADDITIONAL_SAME_SITE_PAGE_FACTS (same schema; [] if none):\n" +
         additionalSiteFactsBlock(additionalSitePages) +
-        "\n\nCOMPETITOR_PAGE_FACTS (same schema per entry; empty array if none):\n" +
+        "\n\nCOMPETITOR_PAGE_FACTS (same schema; [] if none):\n" +
         competitorFactsBlock(competitors) +
         "\n\n" +
         auditScopeInstruction(hasBreadth) +
-        "\n\n**Keys:** `seo_scan`, `preview_actions`, `pro_teaser_actions`, `competitor_analysis` (object|null). " +
-        "Every preview step maps to PRIMARY_PAGE_FACTS. **香港繁體**書面語；淺白、短句；專術語首次附淺釋。",
+        "\n\nRoot keys: `seo_scan`, `preview_actions`, `pro_teaser_actions`, `competitor_analysis`. Preview steps → PRIMARY_PAGE_FACTS.",
     },
   ];
 }
@@ -154,49 +118,41 @@ export function buildPaidScanPrompt(
       role: "system",
       content:
         "Senior **digital marketing + technical SEO** consultant; paid **營銷／growth** deliverable, evidence-led. " +
-        (hasBreadth
-          ? "ADDITIONAL_*: cross-page backlog where facts support (templates, dup titles, links). "
-          : "") +
+        (hasBreadth ? "ADDITIONAL_*: cross-page backlog when facts support. " : "") +
         MARKETING_REPORT_FOCUS +
         " " +
-        COMPETITOR_MINDSET +
+        ON_PAGE_COMPETITOR_AND_HEADINGS +
         (hasComp ? " " + INFERRED_TOPIC_THEMES_RULE + " " : "") +
         SITE_SPECIFIC_IMPLEMENTATION_RULES +
         " " +
-        HK_TRADITIONAL_CHINESE_ONLY +
-        " " +
-        WRITTEN_CHINESE_CLARITY +
-        HEADING_STRUCTURE_GUIDANCE +
-        " Respond with JSON only (no markdown).",
+        HK_TRADITIONAL_AND_PROSE +
+        " JSON only (no markdown). **One** root `{…}` object; no prose before `{`.",
     },
     {
       role: "user",
       content:
-        "**營銷導向** audit: backlog for marketing/content/engineering. " +
+        "**營銷導向** audit — backlog for marketing/content/engineering. " +
         (hasBreadth ? "ADDITIONAL_* = sampled breadth. " : "") +
-        (hasComp ? "Competitors: on-page marketing+tech compare. " : "") +
-        "Return JSON with keys: " +
+        (hasComp ? "Competitors: on-page compare only. " : "") +
+        "Return JSON: " +
         SEO_SCAN_SHAPE_PAID +
-        "`full_actions` (10–18): title, **priority** P0|P1|P2 (P0=blockers, P1=impact, P2=polish — align with `priorityFindings`), impact, effort, `steps` as objects with `text`; optional `detail`/`snippet` (plain text, facts-grounded; omit generic snippets). Order by impact×feasibility. " +
-        (hasComp ? "Mention competitors only if it sharpens a fix. " : "") +
-        "`conversion_notes`: implementation+QA (crawl/index/schema/links/security; messaging when facts support). " +
-        "`preview_actions` (exactly 3): title, rationale, impact?, **steps** 3–6 objects — align with `full_actions` where applicable. " +
+        " `full_actions` (10–18): title, priority P0|P1|P2, impact, effort, steps[{`text`, optional `detail`/`snippet`}]; facts-grounded; order impact×feasibility; align P* with `priorityFindings`. " +
+        (hasComp ? "Reference competitors only if it sharpens a fix. " : "") +
+        "`conversion_notes`: implementation + QA (crawl/index/schema/links/security; messaging when facts support). " +
+        "`preview_actions` (3): align with `full_actions` where applicable. " +
         (hasComp
-          ? "`competitor_analysis` (object: methodology_limits string; executive_summary string; " +
-            "positioning_matrix (array of: competitor_url, their_inferred_positioning, your_inferred_positioning, strategic_takeaway), " +
-            "inferred_topic_themes (primary_themes, competitor_themes), " +
-            "content_gaps (gap_description, what_competitor_does, what_you_should_do), " +
-            "differentiation_opportunities string array, limitations string). "
+          ? "`competitor_analysis` { methodology_limits, executive_summary, positioning_matrix: [{competitor_url, their_inferred_positioning, your_inferred_positioning, strategic_takeaway}], " +
+            "inferred_topic_themes: {primary_themes, competitor_themes}, content_gaps: [{gap_description, what_competitor_does, what_you_should_do}], differentiation_opportunities[], limitations }. "
           : "`competitor_analysis` null. ") +
         "\n\nPRIMARY_PAGE_FACTS:\n" +
         factsBlock(primary) +
-        "\n\nADDITIONAL_SAME_SITE_PAGE_FACTS (same schema; empty array if none):\n" +
+        "\n\nADDITIONAL_SAME_SITE_PAGE_FACTS (same schema; [] if none):\n" +
         additionalSiteFactsBlock(additionalSitePages) +
-        "\n\nCOMPETITOR_PAGE_FACTS (same schema per entry; empty array if none):\n" +
+        "\n\nCOMPETITOR_PAGE_FACTS (same schema; [] if none):\n" +
         competitorFactsBlock(competitors) +
         "\n\n" +
         auditScopeInstruction(hasBreadth) +
-        "\n\nMap actions to PRIMARY_PAGE_FACTS (or additional/competitor when used). **香港繁體**書面語；淺白、短句；專術語首次附淺釋。",
+        "\n\nGround actions in PRIMARY_PAGE_FACTS (or additional/competitor when used).",
     },
   ];
 }

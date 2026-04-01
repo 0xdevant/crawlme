@@ -250,15 +250,15 @@ function getOrCreateDeviceId(): string {
 const SCAN_LOADING_STEPS = [
   {
     title: "讀取你嘅頁面",
-    detail: "下載公開內容；同時會攞 Google PageSpeed（Lighthouse）分數。",
+    detail: "下載公開內容；同步會用 Google PageSpeed 拎實驗室分數（手機）。",
   },
   {
     title: "揀競爭對手",
-    detail: "先搜尋候選網址，再篩選真正其他品牌嘅官網。",
+    detail: "搜尋候選網址，再留低真正其他品牌嘅官網做對照。",
   },
   {
     title: "寫報告",
-    detail: "整理營銷向摘要、優先次序同可跟住做嘅建議。",
+    detail: "整理營銷摘要、優先次序同具體建議。",
   },
 ] as const;
 
@@ -637,9 +637,9 @@ export function ScanForm() {
         >
           <p className="text-sm font-medium text-on-surface">分析緊…</p>
           <p className="mt-2 text-xs text-foreground-muted">
-            唔使關閉呢頁。多數{" "}
-            <span className="text-foreground-muted/95">30–90 秒</span>
-            ，視乎頁面大小同網絡。
+            唔使關閉呢頁。一般{" "}
+            <span className="text-foreground-muted/95">約 30 秒至幾分鐘</span>
+            ，視乎頁面大小、有無對手搜尋同網絡。
           </p>
           <ul className="mx-auto mt-6 max-w-md space-y-2 text-left text-xs">
             {SCAN_LOADING_STEPS.map((step, i) => (
@@ -711,7 +711,7 @@ export function ScanForm() {
                   ? "已掃描同站數個頁面。"
                   : "已分析你貼嘅頁面。"}
               </p>
-              {url.trim() ? (
+              {url.trim() && unified?.composite === null ? (
                 <p className="break-all rounded-lg border border-outline-variant/15 bg-surface-container-low px-3 py-2 font-mono text-[11px] leading-snug text-foreground-muted">
                   {withHttpsScheme(url)}
                 </p>
@@ -787,6 +787,8 @@ export function ScanForm() {
                   <UnifiedScorePanel
                     pagespeedInsights={result.pagespeed_insights}
                     seoScan={result.seo_scan}
+                    primaryFacts={result.facts}
+                    analyzedUrlFallback={withHttpsScheme(url)}
                   />
                 </div>
               ) : null}
@@ -796,7 +798,7 @@ export function ScanForm() {
               >
                 <h2 className="text-lg font-semibold tracking-tight text-on-surface">營銷審計</h2>
                 <p className="mt-1 text-[11px] leading-relaxed text-foreground-subtle">
-                  呢度係按頁面內容、結構、搜尋可見度同技術表現嘅逐項檢視（以今次快照為準）。
+                  按今次抓到嘅頁面內容，檢視內容、結構、搜尋可見度同技術表現（只反映呢次快照）。
                 </p>
                 <div className="mt-4">
                   <SeoScanPanel
@@ -823,7 +825,10 @@ export function ScanForm() {
                   ) : null}
                   <CompetitorSitesRow facts={result.competitor_facts} />
                   <div className="mt-4">
-                    <CompetitorAnalysisPanel data={result.competitor_analysis} />
+                    <CompetitorAnalysisPanel
+                      data={result.competitor_analysis}
+                      competitorFacts={result.competitor_facts}
+                    />
                   </div>
                 </div>
               ) : null}

@@ -5,7 +5,10 @@ import { useCallback, useState, type ReactNode } from "react";
 import type { PageSpeedInsightsPayload } from "@/lib/pagespeed-insights";
 import type { SeoFacts } from "@/lib/seo-extract";
 import { computeUnifiedScore } from "@/lib/report-score";
-import { computeDetailAnalysisSections, normalizeSeoScanForUi } from "@/lib/seo-scan-normalize";
+import {
+  computeDetailAnalysisSections,
+  normalizeSeoScanForUi,
+} from "@/lib/seo-scan-normalize";
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
@@ -22,7 +25,8 @@ const SCORE_DIMS: { key: string; label: string }[] = [
 function priorityBadgeClass(p: string): string {
   const u = p.toUpperCase();
   if (u === "P0") return "bg-red-500/20 text-error ring-1 ring-red-400/35";
-  if (u === "P1") return "bg-secondary-container/80 text-primary ring-1 ring-primary/25";
+  if (u === "P1")
+    return "bg-secondary-container/80 text-primary ring-1 ring-primary/25";
   return "bg-surface-container-high text-secondary ring-1 ring-outline-variant/25";
 }
 
@@ -40,7 +44,9 @@ export function PriorityFindingsPreview({ data }: { data: unknown }) {
   if (!norm || norm.priorityFindings.length === 0) return null;
   return (
     <div className="mt-4">
-      <p className="text-xs font-medium tracking-wide text-on-surface/50">優先次序（最緊要先）</p>
+      <p className="text-xs font-medium tracking-wide text-on-surface/50">
+        優先次序（最緊要先）
+      </p>
       <ul className="mt-3 space-y-3">
         {norm.priorityFindings.map((pf, i) => (
           <li
@@ -80,7 +86,7 @@ export function SeoScanPanel({
   const norm = normalizeSeoScanForUi(data);
   if (!norm) {
     return (
-      <PanelFallback>呢部分暫時顯示唔到。請重試分析。</PanelFallback>
+      <PanelFallback>呢一部分未有可顯示嘅資料。請重新分析一次。</PanelFallback>
     );
   }
 
@@ -98,7 +104,9 @@ export function SeoScanPanel({
     <div className="space-y-6">
       {!hideOverallScore && overall !== null ? (
         <div className="flex flex-wrap items-baseline gap-2">
-          <span className="text-3xl font-semibold tabular-nums text-primary">{Math.round(overall)}</span>
+          <span className="text-3xl font-semibold tabular-nums text-primary">
+            {Math.round(overall)}
+          </span>
           <span className="text-sm text-foreground-muted">
             ／100 · 報告總分
           </span>
@@ -112,10 +120,15 @@ export function SeoScanPanel({
             if (typeof v !== "number") return null;
             const pct = Math.max(0, Math.min(100, Math.round(v)));
             return (
-              <li key={key} className="rounded-lg border border-outline-variant/12 bg-surface-container-lowest px-3 py-2">
+              <li
+                key={key}
+                className="rounded-lg border border-outline-variant/12 bg-surface-container-lowest px-3 py-2"
+              >
                 <div className="flex items-center justify-between gap-2 text-xs">
                   <span className="text-foreground-muted">{label}</span>
-                  <span className="font-mono tabular-nums text-on-surface">{pct}</span>
+                  <span className="font-mono tabular-nums text-on-surface">
+                    {pct}
+                  </span>
                 </div>
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-container-high">
                   <div
@@ -131,19 +144,27 @@ export function SeoScanPanel({
 
       {hasDetailSection ? (
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-on-surface/50">詳細分析</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-on-surface/50">
+            詳細分析
+          </p>
           {detailLead ? (
-            <p className="mt-2 text-base font-medium leading-relaxed text-on-surface/95">{detailLead}</p>
+            <p className="mt-2 text-base font-medium leading-relaxed text-on-surface/95">
+              {detailLead}
+            </p>
           ) : null}
           {detailRest ? (
-            <p className="mt-2 text-sm leading-relaxed text-foreground-muted">{detailRest}</p>
+            <p className="mt-2 text-sm leading-relaxed text-foreground-muted">
+              {detailRest}
+            </p>
           ) : null}
         </div>
       ) : null}
 
       {norm.strengths.length > 0 ? (
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-tertiary-container">已做得唔錯</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-tertiary-container">
+            已做得唔錯
+          </p>
           <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-tertiary-container/95">
             {norm.strengths.map((b, i) => (
               <li key={i}>{b}</li>
@@ -154,14 +175,19 @@ export function SeoScanPanel({
 
       {norm.verificationChecklist.length > 0 ? (
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-on-surface/50">驗證／QA 清單</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-on-surface/50">
+            驗證／QA 清單
+          </p>
           <ul className="mt-2 space-y-2">
             {norm.verificationChecklist.map((line, i) => (
               <li
                 key={i}
                 className="flex gap-2 rounded-lg border border-outline-variant/12 bg-surface-container-high px-3 py-2 text-sm text-foreground-muted"
               >
-                <span className="font-mono text-[11px] text-primary/70" aria-hidden>
+                <span
+                  className="font-mono text-[11px] text-primary/70"
+                  aria-hidden
+                >
                   {i + 1}.
                 </span>
                 <span className="min-w-0 flex-1 leading-relaxed">{line}</span>
@@ -173,7 +199,9 @@ export function SeoScanPanel({
 
       {bullets.length > 0 ? (
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-on-surface/50">其他重點</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-on-surface/50">
+            其他重點
+          </p>
           <ul className="mt-2 list-disc space-y-2 pl-5 text-sm leading-relaxed text-on-surface">
             {bullets.map((b, i) => (
               <li key={i}>{b}</li>
@@ -187,11 +215,14 @@ export function SeoScanPanel({
 
 function impactClass(impact: string): string {
   if (impact === "high") return "bg-secondary-container/90 text-primary";
-  if (impact === "medium") return "bg-surface-container-high text-foreground-muted";
+  if (impact === "medium")
+    return "bg-surface-container-high text-foreground-muted";
   return "bg-surface-container-high text-foreground-subtle";
 }
 
-function normalizeFullActionPriorityToken(raw: unknown): "P0" | "P1" | "P2" | null {
+function normalizeFullActionPriorityToken(
+  raw: unknown,
+): "P0" | "P1" | "P2" | null {
   if (typeof raw !== "string") return null;
   const s = raw
     .trim()
@@ -215,7 +246,9 @@ function priorityFromImpact(impact: string): "P0" | "P1" | "P2" | null {
 }
 
 /** P0/P1/P2 from `priority` when present, else from `impact` (high→P0 …). */
-function resolveFullActionPriority(item: Record<string, unknown>): "P0" | "P1" | "P2" | null {
+function resolveFullActionPriority(
+  item: Record<string, unknown>,
+): "P0" | "P1" | "P2" | null {
   const explicit = normalizeFullActionPriorityToken(item.priority);
   if (explicit) return explicit;
   const impact = typeof item.impact === "string" ? item.impact : "";
@@ -243,7 +276,9 @@ function parseFullActionStep(raw: unknown): ParsedStep | null {
         ? raw.note.trim()
         : undefined;
   const snippet =
-    typeof raw.snippet === "string" && raw.snippet.trim() ? raw.snippet.trim() : undefined;
+    typeof raw.snippet === "string" && raw.snippet.trim()
+      ? raw.snippet.trim()
+      : undefined;
   return { text, detail, snippet };
 }
 
@@ -273,7 +308,11 @@ function CopyTextButton({ text, label }: { text: string; label: string }) {
 /**
  * Free-tier `preview_actions[].steps` — same step shape as Pro `full_actions`.
  */
-export function PreviewActionImplementationSteps({ steps }: { steps: unknown }) {
+export function PreviewActionImplementationSteps({
+  steps,
+}: {
+  steps: unknown;
+}) {
   if (!Array.isArray(steps) || steps.length === 0) return null;
   const parsed = steps
     .map(parseFullActionStep)
@@ -281,7 +320,9 @@ export function PreviewActionImplementationSteps({ steps }: { steps: unknown }) 
   if (parsed.length === 0) return null;
   return (
     <div className="mt-3 border-t border-outline-variant/12 pt-3">
-      <p className="text-[11px] font-medium text-on-surface-variant">實作步驟</p>
+      <p className="text-[11px] font-medium text-on-surface-variant">
+        實作步驟
+      </p>
       <ol className="mt-2 list-none space-y-2 pl-0">
         {parsed.map((s, j) => (
           <ExpandableActionStep key={j} step={s} index={j + 1} />
@@ -292,7 +333,10 @@ export function PreviewActionImplementationSteps({ steps }: { steps: unknown }) 
 }
 
 /** Pulls leading 「貼上位置：…」 / 「適用位置：…」 for prominent display (model should output per prompt). */
-function splitPlacementLine(detail: string): { placement: string | null; body: string } {
+function splitPlacementLine(detail: string): {
+  placement: string | null;
+  body: string;
+} {
   const t = detail.trim();
   if (!t) return { placement: null, body: "" };
   const lines = t.split(/\n/);
@@ -305,7 +349,10 @@ function splitPlacementLine(detail: string): { placement: string | null; body: s
 }
 
 /** True when `snippet` repeats the same pasteable block already shown in `detail` (avoid showing twice). */
-function isSnippetRedundantWithDetail(detail: string | undefined, snippet: string | undefined): boolean {
+function isSnippetRedundantWithDetail(
+  detail: string | undefined,
+  snippet: string | undefined,
+): boolean {
   if (!snippet?.trim() || !detail?.trim()) return false;
   const s = snippet.trim();
   const { body } = splitPlacementLine(detail);
@@ -314,11 +361,18 @@ function isSnippetRedundantWithDetail(detail: string | undefined, snippet: strin
   const norm = (x: string) => x.replace(/\s+/g, " ").trim();
   if (bodyT === s || norm(bodyT) === norm(s)) return true;
   if (bodyT.includes(s) && s.length >= 24) return true;
-  if (detail.includes(s) && s.length >= 24 && bodyT.length >= s.length * 0.85) return true;
+  if (detail.includes(s) && s.length >= 24 && bodyT.length >= s.length * 0.85)
+    return true;
   return false;
 }
 
-function ExpandableActionStep({ step, index }: { step: ParsedStep; index: number }) {
+function ExpandableActionStep({
+  step,
+  index,
+}: {
+  step: ParsedStep;
+  index: number;
+}) {
   const snippetDup = isSnippetRedundantWithDetail(step.detail, step.snippet);
   const snippetToShow = step.snippet && !snippetDup ? step.snippet : undefined;
   const hasExtra = Boolean(step.detail || snippetToShow);
@@ -327,7 +381,9 @@ function ExpandableActionStep({ step, index }: { step: ParsedStep; index: number
     return (
       <li className="rounded-lg border border-outline-variant/12 bg-surface-container-low px-3 py-2">
         <span className="text-sm text-foreground-muted">
-          <span className="mr-2 font-mono tabular-nums text-on-surface-variant">{index}.</span>
+          <span className="mr-2 font-mono tabular-nums text-on-surface-variant">
+            {index}.
+          </span>
           {step.text}
         </span>
       </li>
@@ -336,40 +392,51 @@ function ExpandableActionStep({ step, index }: { step: ParsedStep; index: number
 
   return (
     <li className="rounded-lg border border-outline-variant/12 bg-surface-container-low">
-      <details className="group">
+      {/* Named group so `group-open` isn’t captured by the outer 「完整行動清單」`<details class="group">`. */}
+      <details className="group/step">
         <summary className="flex cursor-pointer list-none items-start justify-between gap-2 py-2 pl-3 pr-2 [&::-webkit-details-marker]:hidden">
           <span className="min-w-0 flex-1 text-left text-sm text-foreground-muted marker:content-none">
-            <span className="mr-2 font-mono tabular-nums text-on-surface-variant">{index}.</span>
+            <span className="mr-2 font-mono tabular-nums text-on-surface-variant">
+              {index}.
+            </span>
             {step.text}
           </span>
-          <span className="shrink-0 text-[10px] text-on-surface/40 transition-transform group-open:-rotate-180">
+          <span className="shrink-0 text-[10px] text-on-surface/40 transition-transform duration-200 group-open/step:-rotate-180">
             ▼
           </span>
         </summary>
         <div className="space-y-3 border-t border-outline-variant/12 px-3 pb-3 pt-2">
-          {step.detail ? (() => {
-            const { placement, body } = splitPlacementLine(step.detail);
-            if (placement) {
-              return (
-                <>
-                  <p className="rounded-lg border border-primary/20 bg-secondary-container/60 px-3 py-2 text-xs font-medium leading-relaxed text-primary">
-                    {placement}
+          {step.detail
+            ? (() => {
+                const { placement, body } = splitPlacementLine(step.detail);
+                if (placement) {
+                  return (
+                    <>
+                      <p className="rounded-lg border border-primary/20 bg-secondary-container/60 px-3 py-2 text-xs font-medium leading-relaxed text-primary">
+                        {placement}
+                      </p>
+                      {body ? (
+                        <p className="text-sm leading-relaxed text-foreground-muted">
+                          {body}
+                        </p>
+                      ) : null}
+                    </>
+                  );
+                }
+                return (
+                  <p className="text-sm leading-relaxed text-foreground-muted">
+                    {step.detail}
                   </p>
-                  {body ? (
-                    <p className="text-sm leading-relaxed text-foreground-muted">{body}</p>
-                  ) : null}
-                </>
-              );
-            }
-            return (
-              <p className="text-sm leading-relaxed text-foreground-muted">{step.detail}</p>
-            );
-          })() : null}
+                );
+              })()
+            : null}
           {snippetToShow ? (
             <div>
               <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="text-[11px] font-medium tracking-wide text-on-surface/55">程式碼片段</span>
+                  <span className="text-[11px] font-medium tracking-wide text-on-surface/55">
+                    程式碼片段
+                  </span>
                   <p className="mt-0.5 text-[10px] leading-snug text-on-surface-variant">
                     只係下面呢段要複製；上面係說明。
                   </p>
@@ -390,9 +457,7 @@ function ExpandableActionStep({ step, index }: { step: ParsedStep; index: number
 /** Renders paid `full_actions` array with structured cards. */
 export function FullActionsPanel({ data }: { data: unknown }) {
   if (!Array.isArray(data) || data.length === 0) {
-    return (
-      <PanelFallback>呢部分暫時未有完整清單。請重試分析。</PanelFallback>
-    );
+    return <PanelFallback>呢部分暫時未有完整清單。請重試分析。</PanelFallback>;
   }
 
   return (
@@ -400,12 +465,16 @@ export function FullActionsPanel({ data }: { data: unknown }) {
       {data.map((item, i) => {
         if (!isRecord(item)) {
           return (
-            <li key={i} className="rounded-lg border border-outline-variant/20 bg-surface-container-low p-3 text-xs text-foreground-muted">
+            <li
+              key={i}
+              className="rounded-lg border border-outline-variant/20 bg-surface-container-low p-3 text-xs text-foreground-muted"
+            >
               無法解析此項目
             </li>
           );
         }
-        const title = typeof item.title === "string" ? item.title : `行動 ${i + 1}`;
+        const title =
+          typeof item.title === "string" ? item.title : `行動 ${i + 1}`;
         const impact = typeof item.impact === "string" ? item.impact : "";
         const effort = typeof item.effort === "string" ? item.effort : "";
         const priorityP = resolveFullActionPriority(item);
@@ -422,8 +491,13 @@ export function FullActionsPanel({ data }: { data: unknown }) {
             <p className="font-medium text-on-surface">{title}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
               {priorityP ? (
-                <span className="inline-flex items-center gap-1.5" title="優先次序（P0 最緊要）">
-                  <span className="text-[10px] font-medium text-on-surface-variant">優先</span>
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  title="優先次序（P0 最緊要）"
+                >
+                  <span className="text-[10px] font-medium text-on-surface-variant">
+                    優先
+                  </span>
                   <span
                     className={`rounded-md px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums ${priorityBadgeClass(priorityP)}`}
                   >
@@ -432,7 +506,9 @@ export function FullActionsPanel({ data }: { data: unknown }) {
                 </span>
               ) : null}
               {impact ? (
-                <span className={`rounded-md px-2 py-0.5 ${impactClass(impact)}`}>
+                <span
+                  className={`rounded-md px-2 py-0.5 ${impactClass(impact)}`}
+                >
                   影響：{impact}
                 </span>
               ) : null}
@@ -481,6 +557,75 @@ function competitorSiteLabel(f: SeoFacts): string {
   return safeHostname(f.finalUrl || f.url);
 }
 
+function parseSeoFactsSingle(x: unknown): SeoFacts | null {
+  if (typeof x !== "object" || x === null) return null;
+  const o = x as SeoFacts;
+  if (typeof o.url === "string" && typeof o.finalUrl === "string") return o;
+  return null;
+}
+
+function parseSeoFactsList(x: unknown): SeoFacts[] {
+  if (!Array.isArray(x)) return [];
+  return x.filter((item): item is SeoFacts => parseSeoFactsSingle(item) !== null);
+}
+
+/** Match `competitor_url` from the model to a crawled competitor snapshot (same host). */
+function findSeoFactsForPageUrl(pageUrl: string, list: SeoFacts[]): SeoFacts | undefined {
+  let targetHost: string;
+  try {
+    targetHost = new URL(pageUrl).hostname.replace(/^www\./i, "");
+  } catch {
+    return undefined;
+  }
+  for (const f of list) {
+    try {
+      const h = new URL(f.finalUrl || f.url).hostname.replace(/^www\./i, "");
+      if (h === targetHost) return f;
+    } catch {
+      continue;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Favicon, title line, hostname line. Use `onPanel` when the card sits on `bg-surface-container-low`
+ * (e.g. {@link CompetitorSitesRow}) so one surface is enough — no extra wrapper.
+ */
+function CompetitorSiteLinkCard({
+  pageUrl,
+  titleLine,
+  variant = "default",
+}: {
+  pageUrl: string;
+  titleLine: string;
+  variant?: "default" | "onPanel";
+}) {
+  const host = safeHostname(pageUrl);
+  const surface =
+    variant === "onPanel"
+      ? "bg-surface-container-lowest shadow-sm hover:bg-surface-container-low"
+      : "bg-surface-container-low hover:bg-surface-container-high";
+  return (
+    <a
+      href={pageUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`flex min-w-0 items-center gap-3 rounded-xl border border-outline-variant/18 px-3 py-2.5 transition hover:border-primary/30 ${surface}`}
+    >
+      <CompetitorFavicon pageUrl={pageUrl} />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium leading-snug text-on-surface">
+          {titleLine}
+        </span>
+        <span className="mt-0.5 block truncate font-mono text-[11px] text-foreground-subtle">
+          {host}
+        </span>
+      </span>
+    </a>
+  );
+}
+
 function CompetitorFavicon({ pageUrl }: { pageUrl: string }) {
   const [err, setErr] = useState(false);
   const src = faviconHref(pageUrl);
@@ -526,22 +671,17 @@ export function CompetitorSitesRow({ facts }: { facts: unknown }) {
     <ul className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
       {list.map((f, i) => {
         const href = f.finalUrl || f.url;
-        const host = safeHostname(href);
         const label = competitorSiteLabel(f);
         return (
-          <li key={`${href}-${i}`} className="min-w-0 sm:max-w-[min(100%,20rem)] sm:flex-1 sm:basis-[14rem]">
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex min-w-0 items-center gap-3 rounded-xl border border-outline-variant/18 bg-surface-container-low px-3 py-2.5 transition hover:border-primary/30 hover:bg-surface-container-high"
-            >
-              <CompetitorFavicon pageUrl={href} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium leading-snug text-on-surface">{label}</span>
-                <span className="mt-0.5 block truncate font-mono text-[11px] text-foreground-subtle">{host}</span>
-              </span>
-            </a>
+          <li
+            key={`${href}-${i}`}
+            className="min-w-0 sm:max-w-[min(100%,20rem)] sm:flex-1 sm:basis-[14rem]"
+          >
+            <CompetitorSiteLinkCard
+              pageUrl={href}
+              titleLine={label}
+              variant="onPanel"
+            />
           </li>
         );
       })}
@@ -550,32 +690,51 @@ export function CompetitorSitesRow({ facts }: { facts: unknown }) {
 }
 
 /** Renders `competitor_analysis` from the model (free + paid shapes). */
-export function CompetitorAnalysisPanel({ data }: { data: unknown }) {
+export function CompetitorAnalysisPanel({
+  data,
+  competitorFacts: competitorFactsProp,
+}: {
+  data: unknown;
+  /** Competitor crawls — matched by host to `positioning_matrix[].competitor_url`. */
+  competitorFacts?: unknown;
+}) {
+  const competitorFactsList = parseSeoFactsList(competitorFactsProp ?? null);
+
   if (data == null) return null;
   if (!isRecord(data)) {
     return (
-      <PanelFallback>呢部分暫時顯示唔到。請重試分析。</PanelFallback>
+      <PanelFallback>呢一部分未有可顯示嘅資料。請重新分析一次。</PanelFallback>
     );
   }
 
   const exec =
     typeof data.executive_summary === "string" ? data.executive_summary : null;
-  const snap = typeof data.snapshot_summary === "string" ? data.snapshot_summary : null;
-  const limitations = typeof data.limitations === "string" ? data.limitations : null;
+  const snap =
+    typeof data.snapshot_summary === "string" ? data.snapshot_summary : null;
+  const limitations =
+    typeof data.limitations === "string" ? data.limitations : null;
 
   const topGaps = Array.isArray(data.top_gaps)
     ? data.top_gaps.filter((x): x is string => typeof x === "string")
     : [];
   const hooks = Array.isArray(data.differentiation_hooks)
-    ? data.differentiation_hooks.filter((x): x is string => typeof x === "string")
+    ? data.differentiation_hooks.filter(
+        (x): x is string => typeof x === "string",
+      )
     : [];
   const diffOpp = Array.isArray(data.differentiation_opportunities)
-    ? data.differentiation_opportunities.filter((x): x is string => typeof x === "string")
+    ? data.differentiation_opportunities.filter(
+        (x): x is string => typeof x === "string",
+      )
     : [];
 
-  const positioningMatrix = Array.isArray(data.positioning_matrix) ? data.positioning_matrix : [];
+  const positioningMatrix = Array.isArray(data.positioning_matrix)
+    ? data.positioning_matrix
+    : [];
   const contentGaps = Array.isArray(data.content_gaps) ? data.content_gaps : [];
-  const topicThemes = isRecord(data.inferred_topic_themes) ? data.inferred_topic_themes : null;
+  const topicThemes = isRecord(data.inferred_topic_themes)
+    ? data.inferred_topic_themes
+    : null;
 
   const hasReadable =
     exec ||
@@ -590,98 +749,129 @@ export function CompetitorAnalysisPanel({ data }: { data: unknown }) {
 
   if (!hasReadable) {
     return (
-      <PanelFallback>呢部分暫時顯示唔到。請重試分析。</PanelFallback>
+      <PanelFallback>呢一部分未有可顯示嘅資料。請重新分析一次。</PanelFallback>
     );
   }
 
   return (
     <div className="space-y-5">
-      {exec ? <p className="text-sm leading-relaxed text-foreground-muted">{exec}</p> : null}
-      {snap ? <p className="text-sm leading-relaxed text-foreground-muted">{snap}</p> : null}
+      {exec ? (
+        <p className="text-sm leading-relaxed text-foreground-muted">{exec}</p>
+      ) : null}
+      {snap ? (
+        <p className="text-sm leading-relaxed text-foreground-muted">{snap}</p>
+      ) : null}
 
-      {topicThemes ? (() => {
-        const primaryList = (
-          Array.isArray(topicThemes.primary_themes) ? topicThemes.primary_themes : []
-        ).filter((x): x is string => typeof x === "string" && x.trim().length > 0);
-        const competitorList = (
-          Array.isArray(topicThemes.competitor_themes) ? topicThemes.competitor_themes : []
-        ).filter((x): x is string => typeof x === "string" && x.trim().length > 0);
-        const hasPrimary = primaryList.length > 0;
-        const hasCompetitor = competitorList.length > 0;
-        if (!hasPrimary && !hasCompetitor) return null;
-        const twoCol = hasPrimary && hasCompetitor;
-        return (
-          <div
-            className={`grid gap-3 ${twoCol ? "sm:grid-cols-2" : ""}`}
-          >
-            {hasPrimary ? (
-              <div className="rounded-lg border border-outline-variant/12 bg-surface-container-lowest p-3">
-                <p className="text-xs font-medium text-on-surface/70">你嘅頁面（主題線索）</p>
-                <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-foreground-muted">
-                  {primaryList.map((t, i) => (
-                    <li key={i}>{t}</li>
-                  ))}
-                </ul>
+      {topicThemes
+        ? (() => {
+            const primaryList = (
+              Array.isArray(topicThemes.primary_themes)
+                ? topicThemes.primary_themes
+                : []
+            ).filter(
+              (x): x is string => typeof x === "string" && x.trim().length > 0,
+            );
+            const competitorList = (
+              Array.isArray(topicThemes.competitor_themes)
+                ? topicThemes.competitor_themes
+                : []
+            ).filter(
+              (x): x is string => typeof x === "string" && x.trim().length > 0,
+            );
+            const hasPrimary = primaryList.length > 0;
+            const hasCompetitor = competitorList.length > 0;
+            if (!hasPrimary && !hasCompetitor) return null;
+            const twoCol = hasPrimary && hasCompetitor;
+            return (
+              <div className={`grid gap-3 ${twoCol ? "sm:grid-cols-2" : ""}`}>
+                {hasPrimary ? (
+                  <div className="rounded-lg border border-outline-variant/12 bg-surface-container-lowest p-3">
+                    <p className="text-xs font-medium text-on-surface/70">
+                      你嘅頁面（主題線索）
+                    </p>
+                    <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-foreground-muted">
+                      {primaryList.map((t, i) => (
+                        <li key={i}>{t}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {hasCompetitor ? (
+                  <div className="rounded-lg border border-outline-variant/12 bg-surface-container-lowest p-3">
+                    <p className="text-xs font-medium text-on-surface/70">
+                      競爭對手（主題線索）
+                    </p>
+                    <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-foreground-muted">
+                      {competitorList.map((t, i) => (
+                        <li key={i}>{t}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : hasPrimary ? (
+                  <p className="rounded-lg border border-outline-variant/12 bg-surface-container-high p-3 text-[11px] leading-relaxed text-foreground-subtle sm:col-span-2">
+                    對手主題線索：今次未有可顯示嘅要點——多數係對手快照字極少、擷取唔完整，或模型未輸出對手主題。
+                  </p>
+                ) : null}
               </div>
-            ) : null}
-            {hasCompetitor ? (
-              <div className="rounded-lg border border-outline-variant/12 bg-surface-container-lowest p-3">
-                <p className="text-xs font-medium text-on-surface/70">競爭對手（主題線索）</p>
-                <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-foreground-muted">
-                  {competitorList.map((t, i) => (
-                    <li key={i}>{t}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : hasPrimary ? (
-              <p className="rounded-lg border border-outline-variant/12 bg-surface-container-high p-3 text-[11px] leading-relaxed text-foreground-subtle sm:col-span-2">
-                對手主題線索：今次未有可顯示嘅要點——多數係對手快照字極少、擷取唔完整，或模型未輸出對手主題。
-              </p>
-            ) : null}
-          </div>
-        );
-      })() : null}
+            );
+          })()
+        : null}
 
       {positioningMatrix.length > 0 ? (
         <div>
           <p className="text-xs font-medium leading-snug text-on-surface">
-            你同對手：各自點樣定位自己
+            同對手比：各自點樣定位
           </p>
           <ul className="mt-2 space-y-3">
             {positioningMatrix.map((row, i) => {
               if (!isRecord(row)) return null;
+              const compUrlRaw =
+                typeof row.competitor_url === "string"
+                  ? row.competitor_url.trim()
+                  : "";
+              let compUrl = compUrlRaw;
+              try {
+                if (compUrl) compUrl = new URL(compUrl).toString();
+              } catch {
+                /* keep raw */
+              }
+              const matchedComp = compUrl
+                ? findSeoFactsForPageUrl(compUrl, competitorFactsList)
+                : undefined;
+              const theirTitle = matchedComp
+                ? competitorSiteLabel(matchedComp)
+                : compUrl
+                  ? safeHostname(compUrl)
+                  : "";
               return (
                 <li
                   key={i}
                   className="rounded-lg border border-outline-variant/12 bg-surface-container-high p-3 text-sm text-foreground-muted"
                 >
-                  {typeof row.competitor_url === "string" ? (
-                    <a
-                      href={row.competitor_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-start gap-2 rounded-lg border border-outline-variant/12 bg-surface-container-low p-2 transition hover:border-primary/25"
-                    >
-                      <CompetitorFavicon pageUrl={row.competitor_url} />
-                      <span className="min-w-0 break-all font-mono text-[11px] leading-relaxed text-foreground-muted">
-                        {row.competitor_url}
-                      </span>
-                    </a>
+                  {compUrl ? (
+                    <div className="min-w-0 max-w-md">
+                      <CompetitorSiteLinkCard
+                        pageUrl={compUrl}
+                        titleLine={theirTitle}
+                      />
+                    </div>
                   ) : null}
                   {typeof row.their_inferred_positioning === "string" ? (
-                    <p className="mt-1">
-                      <span className="text-on-surface/50">對方：</span>
+                    <p className={compUrl ? "mt-3" : "mt-0"}>
+                      <span className="text-on-surface/50">對方定位：</span>
                       {row.their_inferred_positioning}
                     </p>
                   ) : null}
                   {typeof row.your_inferred_positioning === "string" ? (
                     <p className="mt-1">
-                      <span className="text-on-surface/50">你：</span>
+                      <span className="text-on-surface/50">你嘅定位：</span>
                       {row.your_inferred_positioning}
                     </p>
                   ) : null}
                   {typeof row.strategic_takeaway === "string" ? (
-                    <p className="mt-1 text-on-surface">{row.strategic_takeaway}</p>
+                    <p className="mt-2 text-on-surface">
+                      {row.strategic_takeaway}
+                    </p>
                   ) : null}
                 </li>
               );
@@ -699,15 +889,24 @@ export function CompetitorAnalysisPanel({ data }: { data: unknown }) {
             {contentGaps.map((row, i) => {
               if (!isRecord(row)) return null;
               return (
-                <li key={i} className="rounded-lg border border-primary/15 bg-secondary-container/70 p-3 text-sm">
+                <li
+                  key={i}
+                  className="rounded-lg border border-primary/15 bg-secondary-container/70 p-3 text-sm"
+                >
                   {typeof row.gap_description === "string" ? (
-                    <p className="font-medium text-primary">{row.gap_description}</p>
+                    <p className="font-medium text-primary">
+                      {row.gap_description}
+                    </p>
                   ) : null}
                   {typeof row.what_competitor_does === "string" ? (
-                    <p className="mt-1 text-foreground-muted">{row.what_competitor_does}</p>
+                    <p className="mt-1 text-foreground-muted">
+                      {row.what_competitor_does}
+                    </p>
                   ) : null}
                   {typeof row.what_you_should_do === "string" ? (
-                    <p className="mt-2 text-on-surface">{row.what_you_should_do}</p>
+                    <p className="mt-2 text-on-surface">
+                      {row.what_you_should_do}
+                    </p>
                   ) : null}
                 </li>
               );
@@ -745,7 +944,9 @@ export function CompetitorAnalysisPanel({ data }: { data: unknown }) {
           ) : null}
           {diffOpp.length > 0 ? (
             <div className="flex-1">
-              <p className="text-xs font-medium leading-snug text-on-surface">可以點樣做得更唔同</p>
+              <p className="text-xs font-medium leading-snug text-on-surface">
+                可以點樣做得更唔同
+              </p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-foreground-muted">
                 {diffOpp.map((h, i) => (
                   <li key={i}>{h}</li>
@@ -788,63 +989,103 @@ function psiBarClass(score: number): string {
 export function UnifiedScorePanel({
   pagespeedInsights,
   seoScan,
+  primaryFacts: primaryFactsProp,
+  analyzedUrlFallback,
 }: {
   pagespeedInsights: unknown;
   seoScan: unknown;
+  /** 分析嘅頁面 — 同「你嘅競爭對手」一樣嘅連結卡格式。 */
+  primaryFacts?: unknown;
+  /** 後備：表單網址（當 `primaryFacts` 解析唔到時仍顯示連結）。 */
+  analyzedUrlFallback?: string;
 }) {
-  const { composite, psiAvg, aiOverall } = computeUnifiedScore(pagespeedInsights, seoScan);
+  const { composite, psiAvg, aiOverall } = computeUnifiedScore(
+    pagespeedInsights,
+    seoScan,
+  );
   if (composite === null) return null;
+
+  const primaryFacts = parseSeoFactsSingle(primaryFactsProp ?? null);
+  const primaryUrl = primaryFacts
+    ? (primaryFacts.finalUrl || primaryFacts.url).trim()
+    : "";
+  const fallbackUrl = analyzedUrlFallback?.trim() ?? "";
+  const urlForCard = primaryUrl || fallbackUrl;
+  const primaryLabel = primaryFacts ? competitorSiteLabel(primaryFacts) : "";
 
   const payload = pagespeedInsights as PageSpeedInsightsPayload | null;
   const err = payload?.error;
   const scores = payload?.scores ?? null;
-  const analyzed = typeof payload?.analyzedUrl === "string" ? payload.analyzedUrl : "";
+  const analyzed =
+    typeof payload?.analyzedUrl === "string" ? payload.analyzedUrl : "";
 
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight text-on-surface">總分</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-on-surface">
+          總分
+        </h2>
         <div className="mt-4 flex flex-wrap items-baseline gap-3">
-          <span className="text-4xl font-semibold tabular-nums text-tertiary">{composite}</span>
+          <span className="text-4xl font-semibold tabular-nums text-tertiary">
+            {composite}
+          </span>
           <span className="text-sm text-foreground-muted">／100</span>
         </div>
         <p className="mt-2 text-[11px] leading-relaxed text-foreground-subtle">
           {psiAvg !== null && aiOverall !== null ? (
             <>
-              （Google Lab 平均 <span className="tabular-nums text-on-surface">{psiAvg}</span>
-              {" + AI "}
+              總分 =（PageSpeed 四項平均{" "}
+              <span className="tabular-nums text-on-surface">{psiAvg}</span>
+              {" + 審計分 "}
               <span className="tabular-nums text-on-surface">{aiOverall}</span>
-              ）÷ 2
+              ）÷ 2。
               <span className="text-on-surface/50"> · </span>
-              AI 取報告總分；冇總分則用五維平均。
+              審計分優先用「報告總分」；冇嘅話用五維分嘅平均。
             </>
           ) : psiAvg !== null ? (
             <>
-              ＝ Google Lab 四項平均。AI 報告有出，但未有數字化評分（報告總分或五維分項），總分暫時只計
-              Lab。
+              今次總分只計 PageSpeed 四項平均；審計未有可用分數，所以未同 PageSpeed 一齊計。
             </>
           ) : (
             <>
-              ＝ AI 報告評分 <span className="tabular-nums text-on-surface">{aiOverall}</span>
-              （未跑 Google Lab）。
+              而家呢個數 = 審計分{" "}
+              <span className="tabular-nums text-on-surface">{aiOverall}</span>
+              。呢次未有 PageSpeed 分數。
             </>
           )}
         </p>
+        {urlForCard ? (
+          <div className="mt-4 max-w-md">
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-on-surface/45">
+              今次分析嘅頁面
+            </p>
+            <CompetitorSiteLinkCard
+              pageUrl={urlForCard}
+              titleLine={primaryLabel || safeHostname(urlForCard)}
+            />
+          </div>
+        ) : null}
       </div>
 
       {payload && (scores || err || analyzed) ? (
         <details className="group rounded-lg border border-outline-variant/15 bg-surface-container-high px-3 py-2">
           <summary className="cursor-pointer list-none text-xs font-medium text-foreground-muted [&::-webkit-details-marker]:hidden">
-            <span className="inline group-open:hidden">展開睇 Google PageSpeed 分項</span>
-            <span className="hidden group-open:inline">收埋 Google PageSpeed 分項</span>
+            <span className="inline group-open:hidden">
+              展開睇 PageSpeed 四項分數
+            </span>
+            <span className="hidden group-open:inline">
+              收埋 PageSpeed 四項
+            </span>
           </summary>
           <div className="mt-3 space-y-3 border-t border-outline-variant/12 pt-3">
             {analyzed ? (
-              <p className="break-all font-mono text-[11px] text-foreground-muted">{analyzed}</p>
+              <p className="break-all font-mono text-[11px] text-foreground-muted">
+                {analyzed}
+              </p>
             ) : null}
             {err ? (
               <p className="rounded-lg border border-primary/20 bg-secondary-container/60 px-3 py-2 text-sm text-primary">
-                Google 測試：{err}
+                PageSpeed 未能完成：{err}
               </p>
             ) : null}
             {scores && !err ? (
@@ -854,11 +1095,16 @@ export function UnifiedScorePanel({
                   const n = typeof v === "number" ? v : null;
                   const pct = n !== null ? Math.max(0, Math.min(100, n)) : 0;
                   return (
-                    <li key={key} className="rounded-lg border border-outline-variant/12 bg-surface-container-lowest px-3 py-2">
+                    <li
+                      key={key}
+                      className="rounded-lg border border-outline-variant/12 bg-surface-container-lowest px-3 py-2"
+                    >
                       <div className="flex items-center justify-between gap-2 text-xs">
                         <span className="text-foreground-muted">
                           {labelEn}
-                          <span className="ml-1.5 text-[10px] text-on-surface-variant">{labelZh}</span>
+                          <span className="ml-1.5 text-[10px] text-on-surface-variant">
+                            {labelZh}
+                          </span>
                         </span>
                         <span className="font-mono tabular-nums text-on-surface">
                           {n !== null ? n : "—"}
@@ -878,7 +1124,8 @@ export function UnifiedScorePanel({
               </ul>
             ) : null}
             <p className="text-[11px] leading-relaxed text-foreground-subtle">
-              Google 分項係實驗室估算（{payload.strategy === "mobile" ? "手機" : "桌面"}）。
+              以上係實驗室環境估算（
+              {payload.strategy === "mobile" ? "手機" : "桌面"}），同實際訪客體驗可能有出入。
             </p>
           </div>
         </details>

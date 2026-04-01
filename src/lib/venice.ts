@@ -1,9 +1,22 @@
+import { Agent, fetch as undiciFetch } from "undici";
+
 import { getEnv } from "@/lib/env";
 
 const VENICE_BASE = "https://api.venice.ai/api/v1";
 
+/**
+ * Node's fetch (Undici) applies its own `headersTimeout` / `bodyTimeout` (defaults are long in
+ * recent Node, but gaps between streamed chunks can still trip `bodyTimeout`). Venice LLM
+ * responses can stall between tokens — disable Undici's per-phase limits and rely only on
+ * {@link AbortSignal.timeout} for wall-clock caps.
+ */
+const veniceDispatcher = new Agent({
+  headersTimeout: 0,
+  bodyTimeout: 0,
+});
+
 /** Wall-clock cap for the Venice HTTP request (large JSON can take minutes). Override via env. */
-const DEFAULT_VENICE_FETCH_TIMEOUT_MS = 180_000;
+const DEFAULT_VENICE_FETCH_TIMEOUT_MS = 300_000;
 
 /**
  * Default when `VENICE_MODEL` is unset or whitespace-only — Moonshot Kimi K2.5 (`kimi-k2-5` on Venice).
@@ -24,7 +37,9 @@ export type VeniceUsage = {
   headers: Record<string, string>;
 };
 
-function headerSnapshot(headers: Headers): Record<string, string> {
+function headerSnapshot(headers: {
+  forEach(callback: (value: string, key: string) => void): void;
+}): Record<string, string> {
   const out: Record<string, string> = {};
   headers.forEach((v, k) => {
     out[k.toLowerCase()] = v;
@@ -48,6 +63,12 @@ type VeniceChoice = {
   };
 };
 
+/**
+ * Some Venice models (e.g. certain Qwen builds) return Chinese prose in `content` but put the
+ * actual JSON in `reasoning_content`, or ignore `response_format` unless the JSON lives there.
+ * Prefer `content` when it already contains `{`; otherwise fall back to `reasoning_content` if
+ * that field has the object.
+ */
 function extractAssistantText(msg: VeniceChoice["message"]): string {
   if (!msg) return "";
   if (typeof msg.refusal === "string" && msg.refusal.trim()) {
@@ -63,9 +84,15 @@ function extractAssistantText(msg: VeniceChoice["message"]): string {
       )
       .join("");
   }
-  if (!text.trim() && typeof msg.reasoning_content === "string" && msg.reasoning_content.trim()) {
-    const rc = msg.reasoning_content.trim();
-    if (rc.startsWith("{") || rc.startsWith("[")) text = rc;
+  const rc =
+    typeof msg.reasoning_content === "string" && msg.reasoning_content.trim()
+      ? msg.reasoning_content.trim()
+      : "";
+  if (!text.trim() && rc && (rc.startsWith("{") || rc.startsWith("["))) {
+    return rc;
+  }
+  if (text && !text.includes("{") && rc.includes("{")) {
+    return rc;
   }
   return text;
 }
@@ -80,7 +107,7 @@ export async function veniceChatJson(params: {
    * `max_tokens` ≤ 0 is ignored in favor of the model maximum).
    */
   maxCompletionTokens?: number;
-  /** Override `VENICE_FETCH_TIMEOUT_MS` / default 180s. */
+  /** Override `VENICE_FETCH_TIMEOUT_MS` / default 300s. */
   fetchTimeoutMs?: number;
 }): Promise<{ text: string; usage: VeniceUsage }> {
   const timeoutMs =
@@ -103,9 +130,9 @@ export async function veniceChatJson(params: {
     payload.max_completion_tokens = params.maxCompletionTokens;
   }
 
-  let res: Response;
+  let res: Awaited<ReturnType<typeof undiciFetch>>;
   try {
-    res = await fetch(`${VENICE_BASE}/chat/completions`, {
+    res = await undiciFetch(`${VENICE_BASE}/chat/completions`, {
       method: "POST",
       headers: {
         authorization: `Bearer ${params.apiKey}`,
@@ -113,12 +140,21 @@ export async function veniceChatJson(params: {
       },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(timeoutMs),
+      dispatcher: veniceDispatcher,
     });
   } catch (e) {
     const name = e instanceof Error ? e.name : "";
     if (name === "AbortError" || name === "TimeoutError") {
+      console.error(
+        `[venice_timeout]`,
+        JSON.stringify({
+          timeoutMs,
+          model: modelId,
+          hint: "Wall-clock only; Undici timeouts disabled. Raise VENICE_FETCH_TIMEOUT_MS or set INSIGHTS_COMPETITOR_DISCOVERY=model to skip extra Venice calls before the main scan.",
+        }),
+      );
       throw new Error(
-        `Venice 請求逾時（>${Math.round(timeoutMs / 1000)} 秒）。可調高 VENICE_FETCH_TIMEOUT_MS 或稍後重試。`,
+        `Venice 請求逾時（>${Math.round(timeoutMs / 1000)} 秒）。可調高 VENICE_FETCH_TIMEOUT_MS；若仍慢，可暫設 INSIGHTS_COMPETITOR_DISCOVERY=model 跳過對手搜尋前嘅額外 Venice 呼叫；或稍後重試。`,
       );
     }
     throw e;
