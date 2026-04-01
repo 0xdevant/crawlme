@@ -2,7 +2,7 @@
 
 /**
  * 「無可比擬嘅分析深度」— matches Stitch-style bento (Unparalleled Depth).
- * Decorative chart bars / LCP display are illustrative only, not live data.
+ * Decorative chart bars (load-speed illustration) are not live scores.
  */
 import { memo } from "react";
 import {
@@ -54,15 +54,13 @@ function ReportDepthSectionInner() {
                 技術表現與可見度
               </h3>
               <p className="max-w-sm text-secondary">
-                用 Lighthouse 同 PageSpeed Insights 量度載入表現，同時檢查標題、描述、結構化資料等頁面設定。
+                用 Lighthouse 同 PageSpeed Insights
+                量度載入表現，同時檢查標題、描述、結構化資料等頁面設定。
               </p>
             </div>
             <div className="shrink-0 text-right sm:pl-4">
-              <div className="font-headline text-5xl font-black text-primary">
-                LCP
-              </div>
-              <div className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
-                載入速度 · 模擬測試
+              <div className="font-headline text-4xl font-black leading-tight text-primary ">
+                Google 分析
               </div>
             </div>
           </div>
@@ -118,7 +116,9 @@ function ReportDepthSectionInner() {
           <div className="mt-8 space-y-4">
             <div className="flex items-center justify-between rounded-xl bg-white/10 p-3">
               <span className="text-sm font-medium">對手 A</span>
-              <span className="text-sm font-bold text-rose-300">明顯有短板</span>
+              <span className="text-sm font-bold text-rose-300">
+                明顯有短板
+              </span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-white/10 p-3">
               <span className="text-sm font-medium">對手 B</span>
@@ -167,7 +167,9 @@ function ReportDepthSectionInner() {
             <div className="mt-8 flex flex-wrap gap-4">
               <div className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest px-5 py-4 shadow-sm">
                 <div className="font-bold text-primary">優先 1</div>
-                <div className="text-sm text-on-surface">改好標題同搜尋摘要</div>
+                <div className="text-sm text-on-surface">
+                  改好標題同搜尋摘要
+                </div>
               </div>
               <div className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest px-5 py-4 shadow-sm">
                 <div className="font-bold text-tertiary">優先 2</div>
@@ -178,7 +180,10 @@ function ReportDepthSectionInner() {
             </div>
           </div>
           <div className="pointer-events-none absolute bottom-0 right-0 opacity-10">
-            <IconLightbulbWatermark className="h-[200px] w-[200px] text-on-surface" aria-hidden />
+            <IconLightbulbWatermark
+              className="h-[200px] w-[200px] text-on-surface"
+              aria-hidden
+            />
           </div>
         </div>
       </div>
