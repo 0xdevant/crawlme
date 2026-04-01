@@ -1,5 +1,4 @@
 import { auth } from "@clerk/nextjs/server";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getEnv, requireEnv } from "@/lib/env";
@@ -26,10 +25,6 @@ import {
 import { formatErrorCauseChain } from "@/lib/error-cause";
 import { getClientIp } from "@/lib/request-ip";
 import { buildPaidScanPrompt } from "@/lib/scan-prompts";
-import {
-  getSubscriptionForCustomer,
-  isActiveSubscription,
-} from "@/lib/subscription";
 import {
   discoverCompetitorUrlsAuto,
   resolveCompetitorDiscoveryStrategy,
@@ -110,22 +105,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const cookieStore = await cookies();
-    const customerId = cookieStore.get("insights_customer")?.value;
-    const sub = await getSubscriptionForCustomer(customerId);
-    const isSubscriber = isActiveSubscription(sub);
-
     const globalLimit = getFreeGlobalDailyLimit();
     const bypass = isQuotaBypassIp(ip);
 
     let freeGlobalRemaining: number | undefined;
     let consumedGlobal = false;
 
-    if (!isSubscriber && !bypass) {
+    if (!bypass) {
       if (await isUserFreeScanUsed(userId)) {
         return NextResponse.json(
           {
-            error: "此帳戶已使用過體驗額度內嘅分析。聯絡我哋或留意訂閱方案。",
+            error: "此帳戶已使用過體驗額度內嘅分析。聯絡我哋。",
             upgrade: true,
             userFreeExhausted: true,
           },
@@ -173,7 +163,7 @@ export async function POST(request: NextRequest) {
       }
       freeGlobalRemaining = q.remaining;
       consumedGlobal = true;
-    } else if (!isSubscriber && bypass) {
+    } else if (bypass) {
       freeGlobalRemaining = await getGlobalFreeScanRemaining(globalLimit);
     }
 
@@ -187,7 +177,7 @@ export async function POST(request: NextRequest) {
       headerPairs: page.headerPairs,
     });
 
-    const maxExtra = getMaxExtraSitePages(true);
+    const maxExtra = getMaxExtraSitePages(false);
     const extraUrls = pickExtraPagesToCrawl(
       extractSameOriginLinks(page.html, page.finalUrl),
       page.finalUrl,
@@ -396,7 +386,7 @@ export async function POST(request: NextRequest) {
       throw e;
     }
 
-    if (!isSubscriber && !bypass) {
+    if (!bypass) {
       await markUserFreeScanUsed(userId);
       await markIpFreeScanUsed(ip);
       if (validDeviceId) await markDeviceFreeScanUsed(validDeviceId);
@@ -418,7 +408,6 @@ export async function POST(request: NextRequest) {
       competitor_analysis: obj.competitor_analysis ?? null,
       full_actions: obj.full_actions ?? [],
       conversion_notes: obj.conversion_notes ?? null,
-      paid: isSubscriber,
       usage,
       facts,
       competitor_facts: competitorFactsList,

@@ -98,7 +98,7 @@ export async function isDeviceFreeScanUsed(deviceId: string): Promise<boolean> {
   return memoryDeviceOnce.has(key);
 }
 
-/** After a successful experience-tier scan, block this IP until expiry — unless the user has an active paid subscription (Stripe). */
+/** After a successful experience-tier scan, block this IP until expiry. */
 export async function markIpFreeScanUsed(ip: string): Promise<void> {
   if (ip === "unknown") return;
   const key = ipOnceKey(ip);

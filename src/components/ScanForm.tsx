@@ -164,7 +164,6 @@ type ScanResponse = {
   userFreeExhausted?: boolean;
   deviceFreeExhausted?: boolean;
   globalQuotaExhausted?: boolean;
-  paid?: boolean;
   freeGlobalRemaining?: number;
   freeGlobalLimit?: number;
   seo_scan?: unknown;
@@ -296,7 +295,6 @@ export function ScanForm() {
   const { openSignIn } = useClerk();
   const [url, setUrl] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const [paid, setPaid] = useState<boolean | null>(null);
   const [quotaBypass, setQuotaBypass] = useState(false);
   const [ipAlreadyUsedFree, setIpAlreadyUsedFree] = useState(false);
   const [userAlreadyUsedFree, setUserAlreadyUsedFree] = useState(false);
@@ -343,7 +341,6 @@ export function ScanForm() {
       .then((r) => r.json())
       .then(
         (d: {
-          paid?: boolean;
           quotaBypass?: boolean;
           ipAlreadyUsedFree?: boolean;
           userAlreadyUsedFree?: boolean;
@@ -351,8 +348,6 @@ export function ScanForm() {
           freeGlobalRemaining?: number;
           freeGlobalLimit?: number;
         }) => {
-          setPaid(!!d.paid);
-          if (d.paid) return;
           setQuotaBypass(!!d.quotaBypass);
           setIpAlreadyUsedFree(!!d.ipAlreadyUsedFree);
           setUserAlreadyUsedFree(!!d.userAlreadyUsedFree);
@@ -368,7 +363,6 @@ export function ScanForm() {
         },
       )
       .catch(() => {
-        setPaid(false);
         setQuotaBypass(false);
         setIpAlreadyUsedFree(false);
         setUserAlreadyUsedFree(false);
@@ -407,15 +401,14 @@ export function ScanForm() {
 
   const hasGlobalQuota =
     freeGlobalRemaining !== null && freeGlobalLimit !== null;
+  /** 全站名額：有數據就顯示（包括未登入）。個人額度狀態：僅登入後。 */
   const showQuotaInfobox =
-    isSignedIn &&
-    (paid === true ||
-      (!quotaBypass &&
-        (userAlreadyUsedFree || deviceAlreadyUsedFree || ipAlreadyUsedFree)) ||
-      hasGlobalQuota);
+    hasGlobalQuota ||
+    (isSignedIn &&
+      !quotaBypass &&
+      (userAlreadyUsedFree || deviceAlreadyUsedFree || ipAlreadyUsedFree));
 
   const experienceBlocked =
-    paid === false &&
     !quotaBypass &&
     (ipAlreadyUsedFree || userAlreadyUsedFree || deviceAlreadyUsedFree);
 
@@ -475,7 +468,7 @@ export function ScanForm() {
           if (res.status === 429 && data.upgrade) {
             setError(null);
             setPreparingNewScan(false);
-            setResult({ ...data, paid: false });
+            setResult(data);
             void refreshMe();
             return;
           }
@@ -498,7 +491,6 @@ export function ScanForm() {
         if (userId) {
           persistLastScanSession(userId, withHttpsScheme(url), data);
         }
-        if (typeof data.paid === "boolean") setPaid(data.paid);
         if (typeof data.freeGlobalRemaining === "number") {
           setFreeGlobalRemaining(data.freeGlobalRemaining);
         }
@@ -622,7 +614,7 @@ export function ScanForm() {
                     id="hero-heading"
                     className="font-headline text-balance text-3xl font-bold tracking-tight text-on-surface sm:text-4xl md:text-5xl"
                   >
-                    拎網站營銷診斷報告
+                    免費分析你的網站表現
                   </h1>
                   <p className="mx-auto max-w-xl text-pretty text-base leading-relaxed text-foreground-muted sm:text-lg">
                     SEO、市場、競爭對手同 AI 分析，加上可以落手做嘅技術建議。
@@ -721,23 +713,31 @@ export function ScanForm() {
                   ) : null}
                   {showQuotaInfobox ? (
                     <div className="space-y-3 rounded-xl border border-outline-variant/15 bg-surface-container-lowest px-3 py-3 text-left text-xs text-foreground-muted shadow-sm">
-                      {paid === true ? (
-                        <p className="text-foreground-subtle">
-                          你嘅帳戶唔受體驗額度限制。
-                        </p>
-                      ) : !quotaBypass && userAlreadyUsedFree ? (
+                      {isSignedIn &&
+                      !quotaBypass &&
+                      userAlreadyUsedFree ? (
                         <p className="text-primary">
-                          此帳戶已用過體驗額度。聯絡我哋或留意訂閱方案。
+                          此帳戶已用過體驗額度。聯絡我哋。
                         </p>
-                      ) : !quotaBypass && deviceAlreadyUsedFree ? (
+                      ) : null}
+                      {isSignedIn &&
+                      !quotaBypass &&
+                      !userAlreadyUsedFree &&
+                      deviceAlreadyUsedFree ? (
                         <p className="text-primary">
                           呢部瀏覽器／裝置已用過體驗額度。清除本站資料或換另一個瀏覽器檔案仍可能受其他限制。
                         </p>
-                      ) : !quotaBypass && ipAlreadyUsedFree ? (
+                      ) : null}
+                      {isSignedIn &&
+                      !quotaBypass &&
+                      !userAlreadyUsedFree &&
+                      !deviceAlreadyUsedFree &&
+                      ipAlreadyUsedFree ? (
                         <p className="text-primary">
                           呢個 IP 已用過體驗額度。聽日再試、換網絡，或聯絡我哋。
                         </p>
-                      ) : hasGlobalQuota ? (
+                      ) : null}
+                      {hasGlobalQuota ? (
                         <div className="border-l-2 border-primary/35 pl-3">
                           <p className="font-medium text-primary">額度說明</p>
                           <p className="mt-1 text-foreground-subtle">
@@ -851,7 +851,7 @@ export function ScanForm() {
         >
           <p>
             {result.userFreeExhausted
-              ? "此帳戶已用過體驗額度。聯絡我哋或留意訂閱方案。"
+              ? "此帳戶已用過體驗額度。聯絡我哋。"
               : result.deviceFreeExhausted
                 ? "呢部瀏覽器／裝置已用過體驗額度。聯絡我哋。"
                 : result.ipFreeExhausted
