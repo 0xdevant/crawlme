@@ -3,9 +3,9 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { zhTW } from "@clerk/localizations";
 import { shadcn } from "@clerk/themes";
 import { JetBrains_Mono, Manrope, Noto_Sans_TC } from "next/font/google";
-import Image from "next/image";
 import Link from "next/link";
 import { AuthHeader } from "@/components/AuthHeader";
+import { SiteHeaderLogo } from "@/components/SiteHeaderLogo";
 import { QUOTA_TRIAL_BODY } from "@/lib/quota-copy";
 import { CLAWIFY_URL, SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -81,24 +81,7 @@ export default function RootLayout({
           <header className="sticky top-0 z-40 border-b border-outline-variant/20 bg-surface/85 shadow-ambient backdrop-blur-md">
             <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
               <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
-                <Link
-                  href="/"
-                  prefetch={false}
-                  className="insights-focus-ring inline-flex min-h-[44px] items-center gap-2 px-1 py-1.5 transition-opacity hover:opacity-90"
-                >
-                  <Image
-                    src="/logo-header.webp"
-                    alt=""
-                    width={400}
-                    height={400}
-                    priority
-                    sizes="(max-width: 640px) 40px, 44px"
-                    className="h-auto w-auto max-h-10 object-contain sm:max-h-11"
-                  />
-                  <span className="font-headline text-lg font-semibold tracking-tight text-on-surface sm:text-xl">
-                    Insights
-                  </span>
-                </Link>
+                <SiteHeaderLogo />
                 <a
                   href={CLAWIFY_URL}
                   target="_blank"

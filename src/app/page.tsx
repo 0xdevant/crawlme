@@ -14,9 +14,9 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(12,86,208,0.05),_transparent_60%)]" />
       <main
         id="main-content"
-        className="relative mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 pb-16 pt-10 sm:px-6 sm:pb-24 sm:pt-14"
+        className="relative mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-12 px-4 pb-16 pt-10 sm:px-6 sm:pb-24 sm:pt-14"
       >
-        <div className="flex w-full flex-col gap-4">
+        <div className="flex w-full min-w-0 flex-col gap-4">
           <ScanForm />
         </div>
 

@@ -101,7 +101,7 @@ export function SeoScanPanel({
   const hasDetailSection = Boolean(detailLead?.trim() || detailRest?.trim());
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {!hideOverallScore && overall !== null ? (
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="text-3xl font-semibold tabular-nums text-primary">
@@ -122,11 +122,13 @@ export function SeoScanPanel({
             return (
               <li
                 key={key}
-                className="rounded-lg border border-outline-variant/12 bg-surface-container-lowest px-3 py-2"
+                className="min-w-0 rounded-lg border border-outline-variant/12 bg-surface-container-lowest px-3 py-2"
               >
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="text-foreground-muted">{label}</span>
-                  <span className="font-mono tabular-nums text-on-surface">
+                <div className="flex min-w-0 items-center justify-between gap-2 text-xs">
+                  <span className="min-w-0 flex-1 break-words text-foreground-muted">
+                    {label}
+                  </span>
+                  <span className="shrink-0 font-mono tabular-nums text-on-surface">
                     {pct}
                   </span>
                 </div>
@@ -325,7 +327,12 @@ export function PreviewActionImplementationSteps({
       </p>
       <ol className="mt-2 list-none space-y-2 pl-0">
         {parsed.map((s, j) => (
-          <ExpandableActionStep key={j} step={s} index={j + 1} />
+          <ExpandableActionStep
+            key={j}
+            step={s}
+            index={j + 1}
+            showStepNumber={parsed.length > 1}
+          />
         ))}
       </ol>
     </div>
@@ -369,9 +376,12 @@ function isSnippetRedundantWithDetail(
 function ExpandableActionStep({
   step,
   index,
+  showStepNumber = true,
 }: {
   step: ParsedStep;
   index: number;
+  /** When only one step, omit 「1.」 — numbering adds nothing. */
+  showStepNumber?: boolean;
 }) {
   const snippetDup = isSnippetRedundantWithDetail(step.detail, step.snippet);
   const snippetToShow = step.snippet && !snippetDup ? step.snippet : undefined;
@@ -381,9 +391,11 @@ function ExpandableActionStep({
     return (
       <li className="rounded-lg border border-outline-variant/12 bg-surface-container-low px-3 py-2">
         <span className="text-sm text-foreground-muted">
-          <span className="mr-2 font-mono tabular-nums text-on-surface-variant">
-            {index}.
-          </span>
+          {showStepNumber ? (
+            <span className="mr-2 font-mono tabular-nums text-on-surface-variant">
+              {index}.
+            </span>
+          ) : null}
           {step.text}
         </span>
       </li>
@@ -396,9 +408,11 @@ function ExpandableActionStep({
       <details className="group/step">
         <summary className="flex cursor-pointer list-none items-start justify-between gap-2 py-2 pl-3 pr-2 [&::-webkit-details-marker]:hidden">
           <span className="min-w-0 flex-1 text-left text-sm text-foreground-muted marker:content-none">
-            <span className="mr-2 font-mono tabular-nums text-on-surface-variant">
-              {index}.
-            </span>
+            {showStepNumber ? (
+              <span className="mr-2 font-mono tabular-nums text-on-surface-variant">
+                {index}.
+              </span>
+            ) : null}
             {step.text}
           </span>
           <span className="shrink-0 text-[10px] text-on-surface/40 transition-transform duration-200 group-open/step:-rotate-180">
@@ -521,7 +535,12 @@ export function FullActionsPanel({ data }: { data: unknown }) {
             {steps.length > 0 ? (
               <ol className="mt-3 list-none space-y-2 pl-0">
                 {steps.map((s, j) => (
-                  <ExpandableActionStep key={j} step={s} index={j + 1} />
+                  <ExpandableActionStep
+                    key={j}
+                    step={s}
+                    index={j + 1}
+                    showStepNumber={steps.length > 1}
+                  />
                 ))}
               </ol>
             ) : null}
@@ -1020,7 +1039,7 @@ export function UnifiedScorePanel({
     typeof payload?.analyzedUrl === "string" ? payload.analyzedUrl : "";
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div>
         <h2 className="text-lg font-semibold tracking-tight text-on-surface">
           總分
@@ -1031,7 +1050,7 @@ export function UnifiedScorePanel({
           </span>
           <span className="text-sm text-foreground-muted">／100</span>
         </div>
-        <p className="mt-2 text-[11px] leading-relaxed text-foreground-subtle">
+        <p className="mt-2 break-words text-[11px] leading-relaxed text-foreground-subtle">
           {psiAvg !== null && aiOverall !== null ? (
             <>
               總分 =（PageSpeed 四項平均{" "}
@@ -1097,16 +1116,16 @@ export function UnifiedScorePanel({
                   return (
                     <li
                       key={key}
-                      className="rounded-lg border border-outline-variant/12 bg-surface-container-lowest px-3 py-2"
+                      className="min-w-0 rounded-lg border border-outline-variant/12 bg-surface-container-lowest px-3 py-2"
                     >
-                      <div className="flex items-center justify-between gap-2 text-xs">
-                        <span className="text-foreground-muted">
+                      <div className="flex min-w-0 items-center justify-between gap-2 text-xs">
+                        <span className="min-w-0 flex-1 break-words text-foreground-muted">
                           {labelEn}
                           <span className="ml-1.5 text-[10px] text-on-surface-variant">
                             {labelZh}
                           </span>
                         </span>
-                        <span className="font-mono tabular-nums text-on-surface">
+                        <span className="shrink-0 font-mono tabular-nums text-on-surface">
                           {n !== null ? n : "—"}
                         </span>
                       </div>

@@ -18,6 +18,7 @@ import {
   buildScanReportMarkdown,
   downloadMarkdownReport,
 } from "@/lib/export-report-markdown";
+import { INSIGHTS_NAVIGATE_HOME_EVENT } from "@/lib/header-events";
 import {
   INSTAGRAM_PROFILE_URL,
   THREADS_PROFILE_URL,
@@ -309,6 +310,8 @@ export function ScanForm() {
   const [result, setResult] = useState<ScanResponse | null>(null);
   /** True after「分析另一個網址」— show hero form while last report stays below. */
   const [preparingNewScan, setPreparingNewScan] = useState(false);
+  /** True after header logo click on `/` — show marketing home without the full report; use「返回報告」to restore. */
+  const [homeFocusMode, setHomeFocusMode] = useState(false);
   const unified = useMemo(
     () =>
       result
@@ -391,6 +394,13 @@ export function ScanForm() {
   useEffect(() => {
     void refreshMe();
   }, [refreshMe]);
+
+  useEffect(() => {
+    const onNavigateHome = () => setHomeFocusMode(true);
+    window.addEventListener(INSIGHTS_NAVIGATE_HOME_EVENT, onNavigateHome);
+    return () =>
+      window.removeEventListener(INSIGHTS_NAVIGATE_HOME_EVENT, onNavigateHome);
+  }, []);
 
   const needsTurnstile = Boolean(turnstileSiteKey);
   const isDev = process.env.NODE_ENV === "development";
@@ -483,6 +493,7 @@ export function ScanForm() {
           return;
         }
         setResult(data);
+        setHomeFocusMode(false);
         setPreparingNewScan(false);
         if (userId) {
           persistLastScanSession(userId, withHttpsScheme(url), data);
@@ -553,11 +564,14 @@ export function ScanForm() {
   );
 
   const hasSuccessResult = Boolean(result && !result.error && !result.upgrade);
-  /** First visit or「分析另一個網址」— show URL form; hidden while loading so report can stay visible. */
+  /** First visit,「分析另一個網址」, or header logo「home」— show URL form; hide full report when `homeFocusMode`. */
   const showMarketingHero =
-    (!loading && !hasSuccessResult) || (preparingNewScan && !loading);
+    (!loading && !hasSuccessResult) ||
+    (preparingNewScan && !loading) ||
+    (homeFocusMode && hasSuccessResult && !loading);
 
   const resetToNewScan = useCallback(() => {
+    setHomeFocusMode(false);
     setPreparingNewScan(true);
     setError(null);
     setTurnstileToken(null);
@@ -581,7 +595,7 @@ export function ScanForm() {
   }, [analyzedUrlForReport, result, url]);
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex min-w-0 flex-col gap-10">
       {showMarketingHero ? (
         <>
           <section
@@ -590,7 +604,7 @@ export function ScanForm() {
             aria-labelledby="hero-heading"
           >
             <div className="mx-auto max-w-3xl text-center">
-              {preparingNewScan && hasSuccessResult ? (
+              {preparingNewScan && hasSuccessResult && !homeFocusMode ? (
                 <header className="space-y-2">
                   <h2
                     id="hero-heading"
@@ -625,10 +639,11 @@ export function ScanForm() {
                   <p className="sr-only">載入帳戶狀態…</p>
                 </div>
               ) : (
-                <form
-                  className="mx-auto mt-8 flex max-w-2xl flex-col gap-4 text-center"
-                  onSubmit={handleFormSubmit}
-                >
+                <>
+                  <form
+                    className="mx-auto mt-8 flex max-w-2xl flex-col gap-4 text-center"
+                    onSubmit={handleFormSubmit}
+                  >
                   <label className="sr-only" htmlFor="url">
                     要分析嘅頁面網址
                   </label>
@@ -750,11 +765,35 @@ export function ScanForm() {
                       ) : null}
                     </div>
                   ) : null}
-                </form>
+                  </form>
+                  {homeFocusMode && hasSuccessResult ? (
+                    <div className="mx-auto mt-6 flex max-w-2xl justify-center">
+                      <button
+                        type="button"
+                        className="insights-focus-ring flex min-h-[44px] w-full max-w-sm items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition hover:opacity-95 sm:w-auto sm:max-w-none sm:min-w-[7.5rem]"
+                        onClick={() => {
+                          setHomeFocusMode(false);
+                          queueMicrotask(() => {
+                            document
+                              .getElementById("scan-report-anchor")
+                              ?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              });
+                          });
+                        }}
+                      >
+                        返回報告
+                      </button>
+                    </div>
+                  ) : null}
+                </>
               )}
             </div>
           </section>
-          {!hasSuccessResult ? <ReportDepthSection /> : null}
+          {!hasSuccessResult || homeFocusMode ? (
+            <ReportDepthSection />
+          ) : null}
         </>
       ) : null}
 
@@ -834,10 +873,16 @@ export function ScanForm() {
         </div>
       ) : null}
 
-      {hasSuccessResult && result ? (
-        <section className="flex flex-col gap-6">
+      {hasSuccessResult && result && !homeFocusMode ? (
+        <section
+          id="scan-report-anchor"
+          className="flex w-full min-w-0 max-w-full flex-col gap-6 overflow-x-clip scroll-mt-28"
+        >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-            <div className="min-w-0 space-y-2">
+            <div className="min-w-0 flex-1 space-y-2">
+              <h2 className="font-headline text-2xl font-bold tracking-tight text-on-surface sm:text-3xl">
+                分析結果
+              </h2>
               <p className="text-sm text-foreground-muted">
                 {result.site_crawl && result.site_crawl.total_pages > 1
                   ? "已掃描同站數個頁面。"
@@ -850,39 +895,43 @@ export function ScanForm() {
                 </p>
               ) : null}
             </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
               <button
                 type="button"
                 onClick={exportReportAsMarkdown}
-                className="insights-focus-ring rounded-xl border border-outline-variant/20 bg-surface-container-lowest px-4 py-2 text-sm font-medium text-primary transition hover:bg-surface-container-high"
+                className="insights-focus-ring flex min-h-[44px] w-full items-center justify-center rounded-xl border border-outline-variant/20 bg-surface-container-lowest px-4 py-2.5 text-sm font-medium text-primary transition hover:bg-surface-container-high sm:w-auto"
               >
                 匯出 Markdown（.md）
               </button>
               <button
                 type="button"
                 onClick={resetToNewScan}
-                className="insights-focus-ring rounded-xl border border-outline-variant/20 bg-surface-container-high px-4 py-2 text-sm font-medium text-on-surface transition hover:bg-surface-container-high"
+                className="insights-focus-ring flex min-h-[44px] w-full items-center justify-center rounded-xl border border-outline-variant/20 bg-surface-container-high px-4 py-2.5 text-sm font-medium text-on-surface transition hover:bg-surface-container-high sm:w-auto"
               >
                 分析另一個網址
               </button>
             </div>
           </div>
 
+          <p
+            className="border-t border-outline-variant/10 pt-3 text-[11px] leading-snug text-on-surface-variant sm:text-xs"
+            role="note"
+          >
+            報告只暫存於此瀏覽器；換裝置或清資料可能會無咗。需要長期保留可撳上面「匯出 Markdown」下載 .md。
+          </p>
+
           <nav
-            className="-mx-1 flex flex-wrap items-center gap-1 rounded-xl border border-outline-variant/15 bg-surface-container-low px-2 py-2 text-[11px] text-foreground-muted sm:text-xs"
+            className="flex w-full min-w-0 max-w-full flex-wrap items-center gap-x-2 gap-y-2 rounded-xl border border-outline-variant/15 bg-surface-container-low px-2 py-2 text-[11px] text-foreground-muted sm:text-xs"
             aria-label="報告區塊"
           >
-            <span className="px-2 text-on-surface-variant">跳到：</span>
+            <span className="shrink-0 text-on-surface-variant">跳到：</span>
             {unified?.composite !== null ? (
-              <>
-                <a
-                  href="#report-scores"
-                  className="insights-focus-ring inline-flex min-h-[44px] items-center rounded-lg px-2 py-1 text-primary hover:bg-surface-container-high hover:text-on-surface"
-                >
-                  總分
-                </a>
-                <span className="text-outline-variant">·</span>
-              </>
+              <a
+                href="#report-scores"
+                className="insights-focus-ring inline-flex min-h-[44px] items-center rounded-lg px-2 py-1 text-primary hover:bg-surface-container-high hover:text-on-surface"
+              >
+                總分
+              </a>
             ) : null}
             <a
               href="#report-audit"
@@ -894,24 +943,19 @@ export function ScanForm() {
               (Array.isArray(result.competitor_facts) &&
                 result.competitor_facts.length > 0) ||
               result.competitor_discovery?.mode === "automatic") && (
-              <>
-                <span className="text-outline-variant">·</span>
-                <a
-                  href="#report-competitors"
-                  className="insights-focus-ring inline-flex min-h-[44px] items-center rounded-lg px-2 py-1 text-primary hover:bg-surface-container-high hover:text-on-surface"
-                >
-                  競爭對手
-                </a>
-              </>
+              <a
+                href="#report-competitors"
+                className="insights-focus-ring inline-flex min-h-[44px] items-center rounded-lg px-2 py-1 text-primary hover:bg-surface-container-high hover:text-on-surface"
+              >
+                競爭對手
+              </a>
             )}
-            <span className="text-outline-variant">·</span>
             <a
               href="#report-preview"
               className="insights-focus-ring inline-flex min-h-[44px] items-center rounded-lg px-2 py-1 text-primary hover:bg-surface-container-high hover:text-on-surface"
             >
               建議先睇
             </a>
-            <span className="text-outline-variant">·</span>
             <a
               href="#report-full-actions"
               className="insights-focus-ring inline-flex min-h-[44px] items-center rounded-lg px-2 py-1 text-primary hover:bg-surface-container-high hover:text-on-surface"
@@ -920,12 +964,12 @@ export function ScanForm() {
             </a>
           </nav>
 
-          <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
-            <div className="flex flex-col gap-6 lg:col-span-7">
+          <div className="grid min-w-0 gap-6 lg:grid-cols-12 lg:items-start">
+            <div className="flex min-w-0 flex-col gap-6 lg:col-span-7">
               {unified?.composite !== null ? (
                 <div
                   id="report-scores"
-                  className="scroll-mt-24 rounded-2xl border border-outline-variant/20 border-l-2 border-l-tertiary/50 bg-surface-container-low p-6"
+                  className="scroll-mt-24 rounded-2xl border border-outline-variant/20 border-l-2 border-l-tertiary/50 bg-surface-container-low p-4 sm:p-6"
                 >
                   <UnifiedScorePanel
                     pagespeedInsights={result.pagespeed_insights}
@@ -940,7 +984,7 @@ export function ScanForm() {
               ) : null}
               <div
                 id="report-audit"
-                className="scroll-mt-24 rounded-2xl border border-outline-variant/20 bg-surface-container-low p-6"
+                className="scroll-mt-24 rounded-2xl border border-outline-variant/20 bg-surface-container-low p-4 sm:p-6"
               >
                 <h2 className="text-lg font-semibold tracking-tight text-on-surface">
                   營銷審計
@@ -957,7 +1001,7 @@ export function ScanForm() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-6 lg:col-span-5">
+            <div className="flex min-w-0 flex-col gap-6 lg:col-span-5">
               {result.competitor_analysis != null ||
               (Array.isArray(result.competitor_facts) &&
                 result.competitor_facts.length > 0) ||
@@ -986,10 +1030,10 @@ export function ScanForm() {
             </div>
           </div>
 
-          <div className="mt-6 flex flex-col gap-6">
+          <div className="mt-6 flex min-w-0 flex-col gap-6">
             <div
               id="report-preview"
-              className="scroll-mt-24 rounded-2xl border border-outline-variant/20 bg-surface-container-low p-6"
+              className="scroll-mt-24 rounded-2xl border border-outline-variant/20 bg-surface-container-low p-4 sm:p-6"
             >
               <h2 className="text-lg font-semibold tracking-tight text-on-surface">
                 建議先睇
@@ -1046,7 +1090,7 @@ export function ScanForm() {
               className="scroll-mt-24 rounded-2xl border border-outline-variant/20 bg-surface-container-low"
             >
               <details className="group">
-                <summary className="insights-focus-ring flex cursor-pointer list-none items-center justify-between gap-3 p-6 [&::-webkit-details-marker]:hidden">
+                <summary className="insights-focus-ring flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-6 [&::-webkit-details-marker]:hidden">
                   <h2 className="text-lg font-semibold tracking-tight text-on-surface">
                     完整行動清單
                   </h2>
@@ -1055,7 +1099,7 @@ export function ScanForm() {
                     <span className="hidden group-open:inline">收埋</span>
                   </span>
                 </summary>
-                <div className="border-t border-outline-variant/15 px-6 pb-6 pt-2">
+                <div className="border-t border-outline-variant/15 px-4 pb-4 pt-2 sm:px-6 sm:pb-6">
                   <FullActionsPanel data={result.full_actions} />
                 </div>
               </details>
